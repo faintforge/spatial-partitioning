@@ -14,6 +14,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
 
 add_executable(${CMAKE_PROJECT_NAME}
     src/main.c
+    src/window.c
 )
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE include)
 target_link_libraries(${CMAKE_PROJECT_NAME} m arkin SDL2)
