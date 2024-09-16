@@ -1,22 +1,21 @@
 #include "window.h"
-#include "arkin_log.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_video.h>
 
-Window window_create(const char *title, U32 width, U32 height) {
+Window window_create(const char *title, uint32_t width, uint32_t height) {
     Window window = {0};
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        ar_error("SDL::Init");
+        fprintf(stderr, "ERR:SDL::Init\n");
         return window;
     }
 
     SDL_Window *handle = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
     if (handle == NULL) {
-        ar_error("SDL::WindowCreation");
+        fprintf(stderr, "ERR::SDL::WindowCreation\n");
         SDL_Quit();
         return window;
     }
@@ -24,7 +23,7 @@ Window window_create(const char *title, U32 width, U32 height) {
 
     SDL_Renderer *rend = SDL_CreateRenderer(handle, -1, SDL_RENDERER_ACCELERATED);
     if (handle == NULL) {
-        ar_error("SDL::RendererCreation");
+        fprintf(stderr, "ERR::SDL::RendererCreation\n");
         SDL_DestroyWindow(handle);
         SDL_Quit();
         return window;
