@@ -31,6 +31,9 @@ Window window_create(const char *title, uint32_t width, uint32_t height) {
     window.renderer = rend;
     window.is_open = true;
 
+    window.width = width;
+    window.height = height;
+
     return window;
 }
 
@@ -50,4 +53,13 @@ void window_poll_events(Window *window) {
                 break;
         }
     }
+}
+
+void window_clear(Window window, Color color) {
+    SDL_SetRenderDrawColor(window.renderer, color.r, color.g, color.b, color.a);
+    SDL_RenderClear(window.renderer);
+}
+
+void window_present(Window window) {
+    SDL_RenderPresent(window.renderer);
 }

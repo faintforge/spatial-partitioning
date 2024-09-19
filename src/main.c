@@ -2,9 +2,30 @@
 
 #include <SDL2/SDL_timer.h>
 #include <stdint.h>
+#include <stdlib.h>
+
+#include "ds.h"
+#include "box.h"
+
+static float frand(void) {
+    return (float) rand() / RAND_MAX;
+}
 
 int32_t main(void) {
+    const uint32_t BOX_SIZE = 50;
+
     Window window = window_create("Spatial Partitioning", 800, 600);
+
+    srand(1234);
+
+    Vec(Box) boxes = NULL;
+    for (size_t i = 0; i < 8; i++) {
+        Box box = {
+            .pos = vec2(frand()*(window.width-BOX_SIZE), frand()*(window.height-BOX_SIZE)),
+            .size = vec2s(BOX_SIZE),
+        };
+        vec_push(boxes, box);
+    }
 
     uint64_t last = SDL_GetTicks64();
     float dt = 0.0;
@@ -23,21 +44,24 @@ int32_t main(void) {
             fps = 0;
         }
 
-        SDL_SetRenderDrawColor(window.renderer, 0, 0, 0, 255);
-        SDL_RenderClear(window.renderer);
+        window_clear(window, color_rgb_hex(0x000000));
 
-        SDL_Rect rect = {
-            .x = 50,
-            .y = 50,
-            .w = 50,
-            .h = 50,
-        };
         SDL_SetRenderDrawColor(window.renderer, 255, 255, 255, 255);
-        SDL_RenderDrawRect(window.renderer, &rect);
-        SDL_RenderPresent(window.renderer);
+        for (size_t i = 0; i < vec_len(boxes); i++) {
+            SDL_Rect rect = {
+                .x = boxes[i].pos.x,
+                .y = boxes[i].pos.y,
+                .w = boxes[i].size.x,
+                .h = boxes[i].size.y,
+            };
+            SDL_RenderDrawRect(window.renderer, &rect);
+        }
+        window_present(window);
 
         window_poll_events(&window);
     }
+    vec_free(boxes);
+
     window_destroy(&window);
 
     return 0;

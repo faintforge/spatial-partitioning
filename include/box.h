@@ -8,4 +8,4 @@ struct Box {
     Vec2 size;
 };
 
-extern Vec2 box(F32 x, F32 y, F32 w, F32 h);
+extern Vec2 box(float x, float y, float w, float h);
