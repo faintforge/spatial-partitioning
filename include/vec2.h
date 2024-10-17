@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 typedef union Vec2 Vec2;
 union Vec2 {
     struct { float x, y; };
@@ -27,3 +28,5 @@ static inline Vec2 vec2_divs(Vec2 a, float scaler) { return (Vec2) {{a.x/scaler,
 static inline Vec2 vec2_adds(Vec2 a, float scaler) { return (Vec2) {{a.x+scaler, a.y+scaler}}; }
 // Subtract scaler from all elements of vector.
 static inline Vec2 vec2_subs(Vec2 a, float scaler) { return (Vec2) {{a.x-scaler, a.y-scaler}}; }
+
+static inline bool vec2_eq(Vec2 a, Vec2 b) { return a.x == b.x && a.y == b.y; }
