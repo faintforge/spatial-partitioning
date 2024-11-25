@@ -19,7 +19,11 @@ static void quadtree_node_insert(Quadtree *quadtree, QuadtreeNode *node, Box box
         return;
     }
 
-    if (depth == quadtree->max_depth) {
+    if (depth == quadtree->max_depth-1) {
+        if (node->box_i >= MAX_BOX_COUNT) {
+            printf("WARN: Max box count exceeded for a single quadrant.\n");
+            exit(1);
+        }
         node->boxes[node->box_i++] = box;
         return;
     }
