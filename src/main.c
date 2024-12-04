@@ -5,6 +5,8 @@
 #include "color.h"
 #include "window.h"
 
+#include <SDL2/SDL_mouse.h>
+#include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
 #include <time.h>
 #include <unistd.h>
@@ -16,50 +18,210 @@
 #include "ds.h"
 #include "box.h"
 #include "quadtree.h"
+#include "grid.h"
 
 static float frand(void) {
     return (float) rand() / RAND_MAX;
 }
 
-const uint32_t BOX_SIZE = 2;
-const uint32_t WORLD_WIDTH = 1280; 
-const uint32_t WORLD_HEIGHT = 720; 
+typedef struct Config Config;
+struct Config {
+    uint32_t box_size;
+    struct {
+        uint32_t count;
+        uint32_t init_box_count;
+        uint32_t max_box_count;
+    } iter;
+    struct {
+        uint32_t width;
+        uint32_t height;
+    } world;
+};
+
+const Config config = {
+    .box_size = 4,
+    .iter = {
+        .count = 32,
+        .init_box_count = 0,
+        .max_box_count = 1000,
+    },
+    .world = {
+        .width = 1280,
+        .height = 720,
+    }
+};
+#define BOX_INCREASE += 10
 
 static void init_boxes(Vec(Box) *boxes, uint32_t count) {
     srand(1234);
     for (size_t i = 0; i < count; i++) {
         Box box = {
-            .pos = vec2(frand()*(WORLD_WIDTH-BOX_SIZE), frand()*(WORLD_HEIGHT-BOX_SIZE)),
-            .size = vec2s(BOX_SIZE),
+            .pos = vec2(frand()*(config.world.width-config.box_size), frand()*(config.world.height-config.box_size)),
+            .size = vec2s(config.box_size),
         };
         vec_push(*boxes, box);
     }
 }
 
-static void benchmark_quadtree(Window *window) {
-    uint32_t iter_count = 32;
-
+static void benchmark_naive(Window window) {
     Benchmark *bm = NULL;
 
-    for (uint32_t box_count = 1; box_count <= 1<<14; box_count *= 2) {
-        printf("Quadtree: Benchmarking %u boxes with %u iterations...\n", box_count, iter_count);
+    for (uint32_t box_count = config.iter.init_box_count; box_count <= config.iter.max_box_count; box_count BOX_INCREASE) {
+        printf("Naive: Benchmarking %u boxes with %u iterations...\n", box_count, config.iter.count);
+
+        Vec(Box) boxes = NULL;
+        init_boxes(&boxes, box_count);
+
+        Vec(double) iter_times = NULL;
+        for (size_t i = 0; i < config.iter.count; i++) {
+            window_clear(window, color_rgb_hex(0x000000));
+
+            Vec(Box) colliding_boxes = NULL;
+            Vec(Box) non_colliding_boxes = NULL;
+
+            bench_func(iter_time) {
+                for (uint32_t i = 0; i < box_count; i++) {
+                    bool collided = false;
+                    for (uint32_t j = 0; j < box_count; j++) {
+                        if (i == j) {
+                            continue;
+                        }
+
+                        if (box_overlapp(boxes[i], boxes[j])) {
+                            vec_push(colliding_boxes, boxes[i]);
+                            collided = true;
+                            break;
+                        }
+                    }
+                    if (!collided) {
+                        vec_push(non_colliding_boxes, boxes[i]);
+                    }
+                }
+            }
+
+            SDL_SetRenderDrawColor(window.renderer, 255, 0, 0, 255);
+            for (size_t i = 0; i < vec_len(colliding_boxes); i++) {
+                SDL_FRect rect = {
+                    .x = colliding_boxes[i].pos.x,
+                    .y = colliding_boxes[i].pos.y,
+                    .w = colliding_boxes[i].size.w,
+                    .h = colliding_boxes[i].size.h,
+                };
+                SDL_RenderDrawRectF(window.renderer, &rect);
+            }
+
+            SDL_SetRenderDrawColor(window.renderer, 255, 255, 255, 255);
+            for (size_t i = 0; i < vec_len(non_colliding_boxes); i++) {
+                SDL_FRect rect = {
+                    .x = non_colliding_boxes[i].pos.x,
+                    .y = non_colliding_boxes[i].pos.y,
+                    .w = non_colliding_boxes[i].size.w,
+                    .h = non_colliding_boxes[i].size.h,
+                };
+                SDL_RenderDrawRectF(window.renderer, &rect);
+            }
+
+            window_present(window);
+
+            vec_push(iter_times, iter_time);
+
+            vec_free(colliding_boxes);
+            vec_free(non_colliding_boxes);
+        }
+
+        benchmark_register(&bm, iter_times, box_count);
+        vec_free(boxes);
+    }
+
+    benchmark_write_json(bm, "naive.json");
+    benchmark_free(bm);
+}
+
+static void benchmark_grid(Window *window) {
+    Vec(Box) boxes = NULL;
+    init_boxes(&boxes, 100);
+
+    const Box world_box = {
+        .pos = {{0.0f, 0.0f}},
+        .size = {{config.world.width, config.world.height}},
+    };
+    Grid grid = grid_new(world_box, vec2(10, 10));
+
+    while (window->is_open) {
+        for (size_t i = 0; i < vec_len(boxes); i++) {
+            grid_insert(&grid, boxes[i]);
+        }
+
+        window_clear(*window, color_rgb_hex(0x000000));
+
+        SDL_SetRenderDrawColor(window->renderer, 64, 64, 64, 255);
+        grid_debug_draw(grid, window->renderer);
+
+        SDL_SetRenderDrawColor(window->renderer, 255, 255, 255, 255);
+        for (size_t i = 0; i < vec_len(boxes); i++) {
+            SDL_FRect rect = {
+                .x = boxes[i].pos.x,
+                .y = boxes[i].pos.y,
+                .w = boxes[i].size.x,
+                .h = boxes[i].size.y,
+            };
+            SDL_RenderDrawRectF(window->renderer, &rect);
+        }
+
+        int32_t mouse_x, mouse_y;
+        SDL_GetMouseState(&mouse_x, &mouse_y);
+        Vec(Box) query_boxes = grid_query(&grid, (Box) {
+                .pos = {{mouse_x, mouse_y}},
+                .size = vec2s(1),
+            });
+
+        SDL_SetRenderDrawColor(window->renderer, 255, 0, 0, 255);
+        for (size_t i = 0; i < vec_len(query_boxes); i++) {
+            SDL_FRect rect = {
+                .x = query_boxes[i].pos.x,
+                .y = query_boxes[i].pos.y,
+                .w = query_boxes[i].size.x,
+                .h = query_boxes[i].size.y,
+            };
+            SDL_RenderDrawRectF(window->renderer, &rect);
+        }
+
+        grid_reset(&grid);
+
+        window_present(*window);
+        window_poll_events(window);
+    }
+
+    // for (uint32_t box_count = config.iter.init_box_count; box_count <= config.iter.max_box_count; box_count BOX_INCREASE) {
+    //     printf("Grid: Benchmarking %u boxes with %u iterations...\n", box_count, config.iter.count);
+    //     // Initialize
+    //     Vec(Box) boxes = NULL;
+    //     init_boxes(&boxes, box_count);
+    // }
+}
+
+static void benchmark_quadtree(Window window) {
+    Benchmark *bm = NULL;
+
+    for (uint32_t box_count = config.iter.init_box_count; box_count <= config.iter.max_box_count; box_count BOX_INCREASE) {
+        printf("Quadtree: Benchmarking %u boxes with %u iterations...\n", box_count, config.iter.count);
         // Initialize
         Vec(Box) boxes = NULL;
         init_boxes(&boxes, box_count);
 
         const Box world_box = {
             .pos = {{0.0f, 0.0f}},
-            .size = {{WORLD_WIDTH, WORLD_HEIGHT}},
+            .size = {{config.world.width, config.world.height}},
         };
         Quadtree quadtree = quadtree_new(world_box, 8, 8);
 
-        Vec(Box) colliding_boxes = NULL;
-        Vec(Box) non_colliding_boxes = NULL;
-
         Vec(double) iter_times = NULL;
         // Collision testing
-        for (size_t i = 0; i < iter_count; i++) {
-            window_clear(*window, color_rgb_hex(0x000000));
+        for (size_t i = 0; i < config.iter.count; i++) {
+            Vec(Box) colliding_boxes = NULL;
+            Vec(Box) non_colliding_boxes = NULL;
+
+            window_clear(window, color_rgb_hex(0x000000));
             bench_func(iter_time) {
                 for (size_t i = 0; i < vec_len(boxes); i++) {
                     quadtree_insert(&quadtree, boxes[i]);
@@ -85,10 +247,10 @@ static void benchmark_quadtree(Window *window) {
                 }
             }
 
-            SDL_SetRenderDrawColor(window->renderer, 64, 64, 64, 255);
-            quadtree_debug_draw(quadtree, window->renderer);
+            SDL_SetRenderDrawColor(window.renderer, 64, 64, 64, 255);
+            quadtree_debug_draw(quadtree, window.renderer);
 
-            SDL_SetRenderDrawColor(window->renderer, 255, 0, 0, 255);
+            SDL_SetRenderDrawColor(window.renderer, 255, 0, 0, 255);
             for (size_t i = 0; i < vec_len(colliding_boxes); i++) {
                 SDL_FRect rect = {
                     .x = colliding_boxes[i].pos.x,
@@ -96,10 +258,10 @@ static void benchmark_quadtree(Window *window) {
                     .w = colliding_boxes[i].size.w,
                     .h = colliding_boxes[i].size.h,
                 };
-                SDL_RenderDrawRectF(window->renderer, &rect);
+                SDL_RenderDrawRectF(window.renderer, &rect);
             }
 
-            SDL_SetRenderDrawColor(window->renderer, 255, 255, 255, 255);
+            SDL_SetRenderDrawColor(window.renderer, 255, 255, 255, 255);
             for (size_t i = 0; i < vec_len(non_colliding_boxes); i++) {
                 SDL_FRect rect = {
                     .x = non_colliding_boxes[i].pos.x,
@@ -107,16 +269,19 @@ static void benchmark_quadtree(Window *window) {
                     .w = non_colliding_boxes[i].size.w,
                     .h = non_colliding_boxes[i].size.h,
                 };
-                SDL_RenderDrawRectF(window->renderer, &rect);
+                SDL_RenderDrawRectF(window.renderer, &rect);
             }
 
-            window_present(*window);
+            window_present(window);
 
             bench_func(clear_time) {
                 quadtree_clear(&quadtree);
             }
 
             vec_push(iter_times, clear_time + iter_time);
+
+            vec_free(colliding_boxes);
+            vec_free(non_colliding_boxes);
         }
 
         benchmark_register(&bm, iter_times, box_count);
@@ -129,16 +294,12 @@ static void benchmark_quadtree(Window *window) {
     benchmark_free(bm);
 }
 
-static void benchmark_naive(void) {
-}
-
-static void benchmark_hashmap(void) {
-}
-
 int32_t main(void) {
-    Window window = window_create("Spatial Partitioning", WORLD_WIDTH, WORLD_HEIGHT);
+    Window window = window_create("Spatial Partitioning", config.world.width, config.world.height);
 
-    benchmark_quadtree(&window);
+    // benchmark_naive(window);
+    benchmark_grid(&window);
+    // benchmark_quadtree(window);
 
     window_destroy(&window);
     return 0;

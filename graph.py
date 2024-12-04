@@ -1,29 +1,37 @@
 import matplotlib.pyplot as plt
 import json
 
-with open("quadtree.json", "rb") as f:
-    data = json.loads(f.read())
+class Data:
+    def __init__(self, name, file) -> None:
+        self.file = file
+        self.name = name
+        with open(file) as fp:
+            self.data = json.load(fp)
 
-print(json.dumps(data, indent=4))
+class Graph:
+    def __init__(self) -> None:
+        self.fig, self.ax = plt.subplots()
+        self.ax.set(xlabel="box count", ylabel="time (ms)")
+        self.ax.grid()
 
-x = []
-average_y = []
-min_y = []
-max_y = []
-for benchmark in data:
-    x.append(benchmark["box_count"])
-    average_y.append(benchmark["average"])
-    min_y.append(benchmark["min"])
-    max_y.append(benchmark["max"])
+    def plot_data(self, data: Data) -> None:
+        x = []
+        y = []
+        for benchmark in data.data:
+            x.append(benchmark["box_count"])
+            y.append(benchmark["average"])
+        self.ax.plot(x, y, label=data.name);
+        plt.legend()
 
-fig, ax = plt.subplots()
-ax.plot(x, average_y, label="average")
-ax.plot(x, min_y, label="min")
-ax.plot(x, max_y, label="max")
-plt.legend()
+    def save(self, filepath: str):
+        self.fig.savefig(filepath)
 
-ax.set(xlabel = "Box count", ylabel="time (ms)")
-ax.grid()
+data = [
+    Data("naive", "naive.json"),
+    Data("quadtree", "quadtree.json")
+]
 
-fig.savefig("test.png")
-plt.show()
+graph = Graph()
+for d in data:
+    graph.plot_data(d)
+graph.save("graph.png")
