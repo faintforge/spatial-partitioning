@@ -137,67 +137,98 @@ static void benchmark_naive(Window window) {
     benchmark_free(bm);
 }
 
-static void benchmark_grid(Window *window) {
-    Vec(Box) boxes = NULL;
-    init_boxes(&boxes, 100);
+static void benchmark_grid(Window window) {
+    Benchmark *bm = NULL;
 
-    const Box world_box = {
-        .pos = {{0.0f, 0.0f}},
-        .size = {{config.world.width, config.world.height}},
-    };
-    Grid grid = grid_new(world_box, vec2(10, 10));
+    for (uint32_t box_count = config.iter.init_box_count; box_count <= config.iter.max_box_count; box_count BOX_INCREASE) {
+        printf("Grid: Benchmarking %u boxes with %u iterations...\n", box_count, config.iter.count);
+        // Initialize
+        Vec(Box) boxes = NULL;
+        init_boxes(&boxes, box_count);
 
-    while (window->is_open) {
-        for (size_t i = 0; i < vec_len(boxes); i++) {
-            grid_insert(&grid, boxes[i]);
+        const Box world_box = {
+            .pos = {{0.0f, 0.0f}},
+            .size = {{config.world.width, config.world.height}},
+        };
+        Grid grid = grid_new(world_box, vec2(16, 16));
+
+        Vec(double) iter_times = NULL;
+        // Collision testing
+        for (size_t i = 0; i < config.iter.count; i++) {
+            Vec(Box) colliding_boxes = NULL;
+            Vec(Box) non_colliding_boxes = NULL;
+
+            window_clear(window, color_rgb_hex(0x000000));
+            bench_func(iter_time) {
+                for (size_t i = 0; i < vec_len(boxes); i++) {
+                    grid_insert(&grid, boxes[i]);
+                }
+                for (size_t i = 0; i < vec_len(boxes); i++) {
+                    bool collided = false;
+                    Vec(Box) near = grid_query(grid, boxes[i]);
+                    for (size_t j = 0; j < vec_len(near); j++) {
+                        if (box_eq(boxes[i], near[j])) {
+                            continue;
+                        }
+
+                        if (box_overlapp(boxes[i], near[j])) {
+                            vec_push(colliding_boxes, boxes[i]);
+                            collided = true;
+                            break;
+                        }
+                    }
+                    vec_free(near);
+                    if (!collided) {
+                        vec_push(non_colliding_boxes, boxes[i]);
+                    }
+                }
+            }
+
+            SDL_SetRenderDrawColor(window.renderer, 64, 64, 64, 255);
+            grid_debug_draw(grid, window.renderer);
+
+            SDL_SetRenderDrawColor(window.renderer, 255, 0, 0, 255);
+            for (size_t i = 0; i < vec_len(colliding_boxes); i++) {
+                SDL_FRect rect = {
+                    .x = colliding_boxes[i].pos.x,
+                    .y = colliding_boxes[i].pos.y,
+                    .w = colliding_boxes[i].size.w,
+                    .h = colliding_boxes[i].size.h,
+                };
+                SDL_RenderDrawRectF(window.renderer, &rect);
+            }
+
+            SDL_SetRenderDrawColor(window.renderer, 255, 255, 255, 255);
+            for (size_t i = 0; i < vec_len(non_colliding_boxes); i++) {
+                SDL_FRect rect = {
+                    .x = non_colliding_boxes[i].pos.x,
+                    .y = non_colliding_boxes[i].pos.y,
+                    .w = non_colliding_boxes[i].size.w,
+                    .h = non_colliding_boxes[i].size.h,
+                };
+                SDL_RenderDrawRectF(window.renderer, &rect);
+            }
+
+            window_present(window);
+
+            bench_func(clear_time) {
+                grid_reset(&grid);
+            }
+
+            vec_push(iter_times, clear_time + iter_time);
+
+            vec_free(colliding_boxes);
+            vec_free(non_colliding_boxes);
         }
 
-        window_clear(*window, color_rgb_hex(0x000000));
+        benchmark_register(&bm, iter_times, box_count);
 
-        SDL_SetRenderDrawColor(window->renderer, 64, 64, 64, 255);
-        grid_debug_draw(grid, window->renderer);
-
-        SDL_SetRenderDrawColor(window->renderer, 255, 255, 255, 255);
-        for (size_t i = 0; i < vec_len(boxes); i++) {
-            SDL_FRect rect = {
-                .x = boxes[i].pos.x,
-                .y = boxes[i].pos.y,
-                .w = boxes[i].size.x,
-                .h = boxes[i].size.y,
-            };
-            SDL_RenderDrawRectF(window->renderer, &rect);
-        }
-
-        int32_t mouse_x, mouse_y;
-        SDL_GetMouseState(&mouse_x, &mouse_y);
-        Vec(Box) query_boxes = grid_query(&grid, (Box) {
-                .pos = {{mouse_x, mouse_y}},
-                .size = vec2s(1),
-            });
-
-        SDL_SetRenderDrawColor(window->renderer, 255, 0, 0, 255);
-        for (size_t i = 0; i < vec_len(query_boxes); i++) {
-            SDL_FRect rect = {
-                .x = query_boxes[i].pos.x,
-                .y = query_boxes[i].pos.y,
-                .w = query_boxes[i].size.x,
-                .h = query_boxes[i].size.y,
-            };
-            SDL_RenderDrawRectF(window->renderer, &rect);
-        }
-
-        grid_reset(&grid);
-
-        window_present(*window);
-        window_poll_events(window);
+        grid_free(&grid);
+        vec_free(boxes);
     }
 
-    // for (uint32_t box_count = config.iter.init_box_count; box_count <= config.iter.max_box_count; box_count BOX_INCREASE) {
-    //     printf("Grid: Benchmarking %u boxes with %u iterations...\n", box_count, config.iter.count);
-    //     // Initialize
-    //     Vec(Box) boxes = NULL;
-    //     init_boxes(&boxes, box_count);
-    // }
+    benchmark_write_json(bm, "quadtree.json");
+    benchmark_free(bm);
 }
 
 static void benchmark_quadtree(Window window) {
@@ -290,16 +321,16 @@ static void benchmark_quadtree(Window window) {
         vec_free(boxes);
     }
 
-    benchmark_write_json(bm, "quadtree.json");
+    benchmark_write_json(bm, "grid.json");
     benchmark_free(bm);
 }
 
 int32_t main(void) {
     Window window = window_create("Spatial Partitioning", config.world.width, config.world.height);
 
-    // benchmark_naive(window);
-    benchmark_grid(&window);
-    // benchmark_quadtree(window);
+    benchmark_naive(window);
+    benchmark_grid(window);
+    benchmark_quadtree(window);
 
     window_destroy(&window);
     return 0;

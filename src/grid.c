@@ -40,8 +40,8 @@ void grid_insert(Grid *grid, Box box) {
     }
 }
 
-Vec(Box) grid_query(Grid *grid, Box area) {
-    const Vec2 cell_size = vec2_div(grid->world_box.size, grid->cell_count);
+Vec(Box) grid_query(Grid grid, Box area) {
+    const Vec2 cell_size = vec2_div(grid.world_box.size, grid.cell_count);
 
     Vec2 top_left = vec2_div(area.pos, cell_size);
     top_left.x = floorf(top_left.x);
@@ -54,7 +54,7 @@ Vec(Box) grid_query(Grid *grid, Box area) {
     Vec(Box) result = NULL;
     for (int32_t y = top_left.y; y < bottom_right.y; y++) {
         for (int32_t x = top_left.x; x < bottom_right.x; x++) {
-            Cell cell = grid->cells[x+y*(int) grid->cell_count.x];
+            Cell cell = grid.cells[x+y*(int) grid.cell_count.x];
             for (uint32_t i = 0; i < cell.box_i; i++) {
                 vec_push(result, cell.boxes[i]);
             }

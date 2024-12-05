@@ -28,7 +28,8 @@ class Graph:
 
 data = [
     Data("naive", "naive.json"),
-    Data("quadtree", "quadtree.json")
+    Data("grid", "grid.json"),
+    Data("quadtree", "quadtree.json"),
 ]
 
 graph = Graph()
