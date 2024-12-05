@@ -3,6 +3,7 @@
 
 #include "benchmark.h"
 #include "color.h"
+#include "hashing.h"
 #include "window.h"
 
 #include <SDL2/SDL_mouse.h>
@@ -231,6 +232,63 @@ static void benchmark_grid(Window window) {
     benchmark_free(bm);
 }
 
+static void benchmark_spatial_hashing(Window *window) {
+    Vec(Box) boxes = NULL;
+    init_boxes(&boxes, 128);
+
+    uint32_t cell_width = 100;
+    uint32_t cell_height = 100;
+    SpatialHash space = spatial_hash_new(4096, vec2(cell_width, cell_height));
+
+    while (window->is_open) {
+        for (size_t i = 0; i < vec_len(boxes); i++) {
+            spatial_hash_insert(&space, boxes[i]);
+        }
+
+        window_clear(*window, color_rgb_hex(0x000000));
+
+        SDL_SetRenderDrawColor(window->renderer, 64, 64, 64, 255);
+        spatial_hash_debug_draw(space, config.world.width / cell_width + 1, config.world.height / cell_height + 1, window->renderer);
+
+        SDL_SetRenderDrawColor(window->renderer, 255, 255, 255, 255);
+        for (size_t i = 0; i < vec_len(boxes); i++) {
+            SDL_FRect rect = {
+                .x = boxes[i].pos.x,
+                .y = boxes[i].pos.y,
+                .w = boxes[i].size.w,
+                .h = boxes[i].size.h,
+            };
+            SDL_RenderDrawRectF(window->renderer, &rect);
+        }
+
+        int32_t x, y;
+        SDL_GetMouseState(&x, &y);
+        Vec(Box) query = spatial_hash_query(space, (Box) {
+                .pos = vec2(x, y),
+                .size = vec2s(1.0f),
+            });
+
+        SDL_SetRenderDrawColor(window->renderer, 255, 0, 0, 255);
+        for (size_t i = 0; i < vec_len(query); i++) {
+            SDL_FRect rect = {
+                .x = query[i].pos.x,
+                .y = query[i].pos.y,
+                .w = query[i].size.w,
+                .h = query[i].size.h,
+            };
+            SDL_RenderDrawRectF(window->renderer, &rect);
+        }
+        vec_free(query);
+
+        window_present(*window);
+        window_poll_events(window);
+
+        spatial_hash_clear(&space);
+    }
+
+    spatial_hash_free(&space);
+}
+
 static void benchmark_quadtree(Window window) {
     Benchmark *bm = NULL;
 
@@ -328,9 +386,10 @@ static void benchmark_quadtree(Window window) {
 int32_t main(void) {
     Window window = window_create("Spatial Partitioning", config.world.width, config.world.height);
 
-    benchmark_naive(window);
-    benchmark_grid(window);
-    benchmark_quadtree(window);
+    // benchmark_naive(window);
+    // benchmark_grid(window);
+    benchmark_spatial_hashing(&window);
+    // benchmark_quadtree(window);
 
     window_destroy(&window);
     return 0;

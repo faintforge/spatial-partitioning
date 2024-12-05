@@ -34,7 +34,8 @@ void grid_insert(Grid *grid, Box box) {
             Cell *cell = &grid->cells[x+y*(int) grid->cell_count.x];
             cell->boxes[cell->box_i++] = box;
             if (cell->box_i >= GRID_MAX_BOX_COUNT) {
-                printf("Exceeding max cell capacity.");
+                printf("WARN: Exceeding max cell capacity.");
+                exit(1);
             }
         }
     }

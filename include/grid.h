@@ -22,7 +22,10 @@ struct Grid {
 
 extern Grid grid_new(Box grid_size, Vec2 cell_count);
 extern void grid_free(Grid *grid);
+
 extern void grid_insert(Grid *grid, Box box);
-extern Vec(Box) grid_query(Grid grid, Box area);
 extern void grid_reset(Grid *grid);
+
+extern Vec(Box) grid_query(Grid grid, Box area);
+
 extern void grid_debug_draw(Grid grid, SDL_Renderer *renderer);

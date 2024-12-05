@@ -18,6 +18,7 @@ add_executable(${CMAKE_PROJECT_NAME}
     src/quadtree.c
     src/benchmark.c
     src/grid.c
+    src/hashing.c
 )
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE include)
 target_link_libraries(${CMAKE_PROJECT_NAME} m SDL2)
