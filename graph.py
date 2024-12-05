@@ -30,6 +30,7 @@ data = [
     Data("naive", "naive.json"),
     Data("grid", "grid.json"),
     Data("quadtree", "quadtree.json"),
+    Data("spatial hashing", "spatial_hashing.json"),
 ]
 
 graph = Graph()

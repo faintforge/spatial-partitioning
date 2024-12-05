@@ -232,61 +232,96 @@ static void benchmark_grid(Window window) {
     benchmark_free(bm);
 }
 
-static void benchmark_spatial_hashing(Window *window) {
-    Vec(Box) boxes = NULL;
-    init_boxes(&boxes, 128);
+static void benchmark_spatial_hashing(Window window) {
+    Benchmark *bm = NULL;
 
-    uint32_t cell_width = 100;
-    uint32_t cell_height = 100;
-    SpatialHash space = spatial_hash_new(4096, vec2(cell_width, cell_height));
+    for (uint32_t box_count = config.iter.init_box_count; box_count <= config.iter.max_box_count; box_count BOX_INCREASE) {
+        printf("Spatial hash: Benchmarking %u boxes with %u iterations...\n", box_count, config.iter.count);
+        // Initialize
+        Vec(Box) boxes = NULL;
+        init_boxes(&boxes, box_count);
 
-    while (window->is_open) {
-        for (size_t i = 0; i < vec_len(boxes); i++) {
-            spatial_hash_insert(&space, boxes[i]);
+        uint32_t cell_width = 100;
+        uint32_t cell_height = 100;
+        SpatialHash space = spatial_hash_new(4096, vec2(cell_width, cell_height));
+
+        Vec(double) iter_times = NULL;
+        // Collision testing
+        for (size_t i = 0; i < config.iter.count; i++) {
+            Vec(Box) colliding_boxes = NULL;
+            Vec(Box) non_colliding_boxes = NULL;
+
+            window_clear(window, color_rgb_hex(0x000000));
+            bench_func(iter_time) {
+                for (size_t i = 0; i < vec_len(boxes); i++) {
+                    spatial_hash_insert(&space, boxes[i]);
+                }
+                for (size_t i = 0; i < vec_len(boxes); i++) {
+                    bool collided = false;
+                    Vec(Box) near = spatial_hash_query(space, boxes[i]);
+                    for (size_t j = 0; j < vec_len(near); j++) {
+                        if (box_eq(boxes[i], near[j])) {
+                            continue;
+                        }
+
+                        if (box_overlapp(boxes[i], near[j])) {
+                            vec_push(colliding_boxes, boxes[i]);
+                            collided = true;
+                            break;
+                        }
+                    }
+                    vec_free(near);
+                    if (!collided) {
+                        vec_push(non_colliding_boxes, boxes[i]);
+                    }
+                }
+            }
+
+            SDL_SetRenderDrawColor(window.renderer, 64, 64, 64, 255);
+            spatial_hash_debug_draw(space, config.world.width / cell_width + 1, config.world.height / cell_height + 1, window.renderer);
+
+            SDL_SetRenderDrawColor(window.renderer, 255, 0, 0, 255);
+            for (size_t i = 0; i < vec_len(colliding_boxes); i++) {
+                SDL_FRect rect = {
+                    .x = colliding_boxes[i].pos.x,
+                    .y = colliding_boxes[i].pos.y,
+                    .w = colliding_boxes[i].size.w,
+                    .h = colliding_boxes[i].size.h,
+                };
+                SDL_RenderDrawRectF(window.renderer, &rect);
+            }
+
+            SDL_SetRenderDrawColor(window.renderer, 255, 255, 255, 255);
+            for (size_t i = 0; i < vec_len(non_colliding_boxes); i++) {
+                SDL_FRect rect = {
+                    .x = non_colliding_boxes[i].pos.x,
+                    .y = non_colliding_boxes[i].pos.y,
+                    .w = non_colliding_boxes[i].size.w,
+                    .h = non_colliding_boxes[i].size.h,
+                };
+                SDL_RenderDrawRectF(window.renderer, &rect);
+            }
+
+            window_present(window);
+
+            bench_func(clear_time) {
+                spatial_hash_clear(&space);
+            }
+
+            vec_push(iter_times, clear_time + iter_time);
+
+            vec_free(colliding_boxes);
+            vec_free(non_colliding_boxes);
         }
 
-        window_clear(*window, color_rgb_hex(0x000000));
+        benchmark_register(&bm, iter_times, box_count);
 
-        SDL_SetRenderDrawColor(window->renderer, 64, 64, 64, 255);
-        spatial_hash_debug_draw(space, config.world.width / cell_width + 1, config.world.height / cell_height + 1, window->renderer);
-
-        SDL_SetRenderDrawColor(window->renderer, 255, 255, 255, 255);
-        for (size_t i = 0; i < vec_len(boxes); i++) {
-            SDL_FRect rect = {
-                .x = boxes[i].pos.x,
-                .y = boxes[i].pos.y,
-                .w = boxes[i].size.w,
-                .h = boxes[i].size.h,
-            };
-            SDL_RenderDrawRectF(window->renderer, &rect);
-        }
-
-        int32_t x, y;
-        SDL_GetMouseState(&x, &y);
-        Vec(Box) query = spatial_hash_query(space, (Box) {
-                .pos = vec2(x, y),
-                .size = vec2s(1.0f),
-            });
-
-        SDL_SetRenderDrawColor(window->renderer, 255, 0, 0, 255);
-        for (size_t i = 0; i < vec_len(query); i++) {
-            SDL_FRect rect = {
-                .x = query[i].pos.x,
-                .y = query[i].pos.y,
-                .w = query[i].size.w,
-                .h = query[i].size.h,
-            };
-            SDL_RenderDrawRectF(window->renderer, &rect);
-        }
-        vec_free(query);
-
-        window_present(*window);
-        window_poll_events(window);
-
-        spatial_hash_clear(&space);
+        spatial_hash_free(&space);
+        vec_free(boxes);
     }
 
-    spatial_hash_free(&space);
+    benchmark_write_json(bm, "spatial_hashing.json");
+    benchmark_free(bm);
 }
 
 static void benchmark_quadtree(Window window) {
@@ -386,10 +421,10 @@ static void benchmark_quadtree(Window window) {
 int32_t main(void) {
     Window window = window_create("Spatial Partitioning", config.world.width, config.world.height);
 
-    // benchmark_naive(window);
-    // benchmark_grid(window);
-    benchmark_spatial_hashing(&window);
-    // benchmark_quadtree(window);
+    benchmark_naive(window);
+    benchmark_grid(window);
+    benchmark_spatial_hashing(window);
+    benchmark_quadtree(window);
 
     window_destroy(&window);
     return 0;
