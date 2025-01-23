@@ -54,28 +54,58 @@ const Config config = {
 };
 #define BOX_INCREASE += 10
 
-static void init_boxes(Vec(Box) *boxes, uint32_t count) {
+typedef void (*RandomPointsFunc)(Vec2* points, int count, Vec2 space);
+
+void even_distribution(Vec2* points, int count, Vec2 space) {
+    for (int i = 0; i < count; i++) {
+        points[i] = vec2_mul(vec2(frand(), frand()), space);
+    }
+}
+
+// Probability density function
+float pdf(Vec2 point) {
+    Vec2 c = vec2s(0.5f);
+    Vec2 delta = vec2_sub(point, c);
+    // Gaussian falloff
+    return expf(-(delta.x * delta.x + delta.y * delta.y) / 0.1f);
+}
+
+void uneven_distribution(Vec2* points, int count, Vec2 space) {
+    int i = 0;
+    while (i < count) {
+        Vec2 point = vec2(frand(), frand());
+        float p = pdf(point);
+        if (frand() < p) {
+            points[i++] = vec2_mul(point, space);
+        }
+    }
+}
+
+static void init_boxes(Vec(Box) *boxes, uint32_t count, RandomPointsFunc rand_points_func) {
     srand(1234);
+
+    Vec2* pos = malloc(sizeof(Vec2) * count);
+    rand_points_func(pos, count, vec2(config.world.width - config.box_size, config.world.height - config.box_size));
     for (size_t i = 0; i < count; i++) {
         Box box = {
-            .pos = vec2(frand()*(config.world.width-config.box_size), frand()*(config.world.height-config.box_size)),
+            .pos = pos[i],
             .size = vec2s(config.box_size),
         };
         vec_push(*boxes, box);
     }
+    free(pos);
 }
 
-static void run(Window window, Strategy strat, const void* desc, const char* name) {
+static void run(Window window, Strategy strat, const void* desc, const char* name, RandomPointsFunc rand_points_func) {
     for (uint32_t box_count = config.iter.init_box_count; box_count <= config.iter.max_box_count; box_count BOX_INCREASE) {
-        bm_begin("%u", box_count);
-
         printf("%s: Benchmarking %u boxes with %u iterations...\n", name, box_count, config.iter.count);
 
         Vec(Box) boxes = NULL;
-        init_boxes(&boxes, box_count);
+        init_boxes(&boxes, box_count, rand_points_func);
 
         void* data = strat.new(desc);
 
+        bm_begin("%u", box_count);
         for (size_t i = 0; i < config.iter.count; i++) {
             // Insert all the boxes into the space.
             bm_begin("insert");
@@ -164,41 +194,82 @@ int32_t main(void) {
         .size = {{config.world.width, config.world.height}},
     };
 
-    // Naive
-    bm_begin("naive");
-    run(window, STRATEGY_NAIVE, NULL, "Naive");
-    bm_end();
+    {
+        // Naive
+        bm_begin("naive");
+        run(window, STRATEGY_NAIVE, NULL, "Naive", even_distribution);
+        bm_end();
 
-    // Gird
-    GridDesc grid_desc = {
-        .grid_size = world_box,
-        .cell_count = vec2(16, 16),
-    };
-    bm_begin("grid");
-    run(window, STRATEGY_GRID, &grid_desc, "Grid");
-    bm_end();
+        // Gird
+        GridDesc grid_desc = {
+            .grid_size = world_box,
+            .cell_count = vec2(16, 16),
+        };
+        bm_begin("grid");
+        run(window, STRATEGY_GRID, &grid_desc, "Grid", even_distribution);
+        bm_end();
 
-    // Quadtree
-    QuadtreeDesc qt_desc = {
-        .area = world_box,
-        .max_depth = 8,
-        .max_box_count = 8,
-    };
-    bm_begin("quadtree");
-    run(window, STRATEGY_QUADTREE, &qt_desc, "Quadtree");
-    bm_end();
+        // Quadtree
+        QuadtreeDesc qt_desc = {
+            .area = world_box,
+            .max_depth = 8,
+            .max_box_count = 8,
+        };
+        bm_begin("quadtree");
+        run(window, STRATEGY_QUADTREE, &qt_desc, "Quadtree", even_distribution);
+        bm_end();
 
-    // Spatial hashing
-    SpatialHashDesc sh_desc = {
-        .cell_size = vec2s(100.0f),
-        .map_capacity = 4096,
-    };
-    bm_begin("spatial-hashing");
-    run(window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing");
-    bm_end();
+        // Spatial hashing
+        SpatialHashDesc sh_desc = {
+            .cell_size = vec2s(100.0f),
+            .map_capacity = 4096,
+        };
+        bm_begin("spatial-hashing");
+        run(window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing", even_distribution);
+        bm_end();
 
-    // bm_dump();
-    bm_dump_json("benchmark.json");
+        // bm_dump();
+        bm_dump_json("benchmark-even.json");
+    }
+
+    bm_reset();
+
+    {
+        // Naive
+        bm_begin("naive");
+        run(window, STRATEGY_NAIVE, NULL, "Naive", uneven_distribution);
+        bm_end();
+
+        // Gird
+        GridDesc grid_desc = {
+            .grid_size = world_box,
+            .cell_count = vec2(16, 16),
+        };
+        bm_begin("grid");
+        run(window, STRATEGY_GRID, &grid_desc, "Grid", uneven_distribution);
+        bm_end();
+
+        // Quadtree
+        QuadtreeDesc qt_desc = {
+            .area = world_box,
+            .max_depth = 8,
+            .max_box_count = 8,
+        };
+        bm_begin("quadtree");
+        run(window, STRATEGY_QUADTREE, &qt_desc, "Quadtree", uneven_distribution);
+        bm_end();
+
+        // Spatial hashing
+        SpatialHashDesc sh_desc = {
+            .cell_size = vec2s(100.0f),
+            .map_capacity = 4096,
+        };
+        bm_begin("spatial-hashing");
+        run(window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing", uneven_distribution);
+        bm_end();
+
+        bm_dump_json("benchmark-uneven.json");
+    }
 
     window_destroy(&window);
     return 0;

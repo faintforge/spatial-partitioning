@@ -196,3 +196,8 @@ void bm_dump_json(const char* filename) {
     fprintf(fp, "}");
     fclose(fp);
 }
+
+void bm_reset(void) {
+    hash_map_free(root.children);
+    curr = NULL;
+}

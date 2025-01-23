@@ -29,3 +29,4 @@ extern void bm_end(void);
 
 extern void bm_dump(void);
 extern void bm_dump_json(const char* filename);
+extern void bm_reset(void);
