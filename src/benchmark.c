@@ -146,16 +146,16 @@ void bm_dump_json_helper(FILE* fp, const Benchmark* bm, int depth) {
     fprintf(fp, "%s\"run_count\": %u,\n", spaces, bm->run_count);
 
     // Average time
-    fprintf(fp, "%s\"average\": %f,\n", spaces, bm->average_ms);
+    fprintf(fp, "%s\"average\": %.15f,\n", spaces, bm->average_ms);
 
     // Total time
-    fprintf(fp, "%s\"total\": %f,\n", spaces, bm->total_ms);
+    fprintf(fp, "%s\"total\": %.15f,\n", spaces, bm->total_ms);
 
     // Min time
-    fprintf(fp, "%s\"min\": %f,\n", spaces, bm->min_ms);
+    fprintf(fp, "%s\"min\": %.15f,\n", spaces, bm->min_ms);
 
     // Max time
-    fprintf(fp, "%s\"max\": %f,\n", spaces, bm->max_ms);
+    fprintf(fp, "%s\"max\": %.15f,\n", spaces, bm->max_ms);
 
     // Children
     fprintf(fp, "%s\"children\": {\n", spaces);

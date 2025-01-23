@@ -11,11 +11,14 @@ if len(sys.argv) != 3:
 with open(sys.argv[1], "rb") as f:
     data = json.load(f)
 
-def graph(name, data_point):
+def graph(name, data_point, include_naive=False):
     fig, ax = plt.subplots()
     ax.set(xlabel="box count", ylabel="time (ms)")
     ax.grid()
     for strat in data:
+        if not include_naive and strat == "naive":
+            continue;
+
         print(f"{strat}: {sys.argv[2]}-{name}.png")
         run_times = {}
         for box_count in data[strat]["children"]:
@@ -27,12 +30,14 @@ def graph(name, data_point):
 
     fig.savefig(f"graphs/{sys.argv[2]}-{name}.png")
 
-graph("total", lambda box: box["total"])
-graph("insert", lambda box: box["children"]["insert"]["total"])
-graph("collision", lambda box: box["children"]["collision"]["total"])
+graph("average", lambda box: box["average"])
+graph("insert", lambda box: box["children"]["insert"]["average"])
+graph("collision", lambda box: box["children"]["collision"]["average"])
 def query(box):
     children = box["children"]["collision"]["children"]
     if "query" in children:
-        return children["query"]["total"]
+        return children["query"]["average"]
     return 0.0
 graph("query", query)
+
+# graph("naive", lambda box: box["average"], True)
