@@ -17,6 +17,8 @@ struct Benchmark {
     double min_ms;
     double max_ms;
     HashMap(const char*, Benchmark*) children;
+
+    double _start;
 };
 
 extern double get_time(void);
@@ -26,3 +28,4 @@ extern void bm_end(void);
 #define bm(fmt, ...) for (bool _i_ = (bm_begin(name, ##__VA_ARGS__), false); !_i_; _i_ = (bm_end(), true))
 
 extern void bm_dump(void);
+extern void bm_dump_json(const char* filename);

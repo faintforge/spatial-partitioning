@@ -43,7 +43,7 @@ struct Config {
 const Config config = {
     .box_size = 4,
     .iter = {
-        .count = 1,
+        .count = 32,
         .init_box_count = 0,
         .max_box_count = 1000,
     },
@@ -67,7 +67,7 @@ static void init_boxes(Vec(Box) *boxes, uint32_t count) {
 
 static void run(Window window, Strategy strat, const void* desc, const char* name) {
     for (uint32_t box_count = config.iter.init_box_count; box_count <= config.iter.max_box_count; box_count BOX_INCREASE) {
-        bm_begin("box-%u", box_count);
+        bm_begin("%u", box_count);
 
         printf("%s: Benchmarking %u boxes with %u iterations...\n", name, box_count, config.iter.count);
 
@@ -197,7 +197,8 @@ int32_t main(void) {
     run(window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing");
     bm_end();
 
-    bm_dump();
+    // bm_dump();
+    bm_dump_json("benchmark.json");
 
     window_destroy(&window);
     return 0;
