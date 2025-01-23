@@ -22,6 +22,8 @@
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_timer.h>
 
+static bool run_visually = true;
+
 static float frand(void) {
     return (float) rand() / RAND_MAX;
 }
@@ -45,7 +47,7 @@ const Config config = {
     .iter = {
         .count = 32,
         .init_box_count = 10,
-        .max_box_count = 2500,
+        .max_box_count = 1000,
     },
     .world = {
         .width = 1280,
@@ -144,36 +146,39 @@ static void run(Window* window, Strategy strat, const void* desc, const char* na
             bm_end();
 
             // Visualize.
-            window_clear(*window, color_rgb_hex(0x000000));
-            SDL_SetRenderDrawColor(window->renderer, 64, 64, 64, 255);
-            strat.debug_draw(data, window->renderer);
+            if (run_visually) {
+                window_clear(*window, color_rgb_hex(0x000000));
+                SDL_SetRenderDrawColor(window->renderer, 64, 64, 64, 255);
+                strat.debug_draw(data, window->renderer);
 
-            SDL_SetRenderDrawColor(window->renderer, 255, 0, 0, 255);
-            for (size_t i = 0; i < vec_len(colliding_boxes); i++) {
-                SDL_FRect rect = {
-                    .x = colliding_boxes[i].pos.x,
-                    .y = colliding_boxes[i].pos.y,
-                    .w = colliding_boxes[i].size.w,
-                    .h = colliding_boxes[i].size.h,
-                };
-                SDL_RenderDrawRectF(window->renderer, &rect);
-            }
+                SDL_SetRenderDrawColor(window->renderer, 255, 0, 0, 255);
+                for (size_t i = 0; i < vec_len(colliding_boxes); i++) {
+                    SDL_FRect rect = {
+                        .x = colliding_boxes[i].pos.x,
+                        .y = colliding_boxes[i].pos.y,
+                        .w = colliding_boxes[i].size.w,
+                        .h = colliding_boxes[i].size.h,
+                    };
+                    SDL_RenderDrawRectF(window->renderer, &rect);
+                }
 
-            SDL_SetRenderDrawColor(window->renderer, 255, 255, 255, 255);
-            for (size_t i = 0; i < vec_len(non_colliding_boxes); i++) {
-                SDL_FRect rect = {
-                    .x = non_colliding_boxes[i].pos.x,
-                    .y = non_colliding_boxes[i].pos.y,
-                    .w = non_colliding_boxes[i].size.w,
-                    .h = non_colliding_boxes[i].size.h,
-                };
-                SDL_RenderDrawRectF(window->renderer, &rect);
-            }
+                SDL_SetRenderDrawColor(window->renderer, 255, 255, 255, 255);
+                for (size_t i = 0; i < vec_len(non_colliding_boxes); i++) {
+                    SDL_FRect rect = {
+                        .x = non_colliding_boxes[i].pos.x,
+                        .y = non_colliding_boxes[i].pos.y,
+                        .w = non_colliding_boxes[i].size.w,
+                        .h = non_colliding_boxes[i].size.h,
+                    };
+                    SDL_RenderDrawRectF(window->renderer, &rect);
+                }
 
-            window_present(*window);
-            window_poll_events(window);
-            if (!window->is_open) {
-                exit(0);
+                window_present(*window);
+                window_poll_events(window);
+
+                if (!window->is_open) {
+                    exit(0);
+                }
             }
 
             bm_begin("clear");
@@ -191,7 +196,13 @@ static void run(Window* window, Strategy strat, const void* desc, const char* na
 }
 
 int32_t main(void) {
-    Window window = window_create("Spatial Partitioning", config.world.width, config.world.height);
+    run_visually = false;
+
+    Window* window = NULL;
+    if (run_visually) {
+        window = malloc(sizeof(Window));
+        *window = window_create("Spatial Partitioning", config.world.width, config.world.height);
+    }
 
     const Box world_box = {
         .pos = {{0.0f, 0.0f}},
@@ -201,7 +212,7 @@ int32_t main(void) {
     {
         // Naive
         // bm_begin("naive");
-        // run(&window, STRATEGY_NAIVE, NULL, "Naive", even_distribution);
+        // run(window, STRATEGY_NAIVE, NULL, "Naive", even_distribution);
         // bm_end();
 
         // Gird
@@ -210,7 +221,7 @@ int32_t main(void) {
             .cell_count = vec2(16, 16),
         };
         bm_begin("grid");
-        run(&window, STRATEGY_GRID, &grid_desc, "Grid", even_distribution);
+        run(window, STRATEGY_GRID, &grid_desc, "Grid", even_distribution);
         bm_end();
 
         // Quadtree
@@ -220,7 +231,7 @@ int32_t main(void) {
             .max_box_count = 8,
         };
         bm_begin("quadtree");
-        run(&window, STRATEGY_QUADTREE, &qt_desc, "Quadtree", even_distribution);
+        run(window, STRATEGY_QUADTREE, &qt_desc, "Quadtree", even_distribution);
         bm_end();
 
         // Spatial hashing
@@ -229,7 +240,7 @@ int32_t main(void) {
             .map_capacity = 4096,
         };
         bm_begin("spatial-hashing");
-        run(&window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing", even_distribution);
+        run(window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing", even_distribution);
         bm_end();
 
         // bm_dump();
@@ -241,7 +252,7 @@ int32_t main(void) {
     {
         // Naive
         // bm_begin("naive");
-        // run(&window, STRATEGY_NAIVE, NULL, "Naive", uneven_distribution);
+        // run(window, STRATEGY_NAIVE, NULL, "Naive", uneven_distribution);
         // bm_end();
 
         // Gird
@@ -250,7 +261,7 @@ int32_t main(void) {
             .cell_count = vec2(16, 16),
         };
         bm_begin("grid");
-        run(&window, STRATEGY_GRID, &grid_desc, "Grid", uneven_distribution);
+        run(window, STRATEGY_GRID, &grid_desc, "Grid", uneven_distribution);
         bm_end();
 
         // Quadtree
@@ -260,7 +271,7 @@ int32_t main(void) {
             .max_box_count = 8,
         };
         bm_begin("quadtree");
-        run(&window, STRATEGY_QUADTREE, &qt_desc, "Quadtree", uneven_distribution);
+        run(window, STRATEGY_QUADTREE, &qt_desc, "Quadtree", uneven_distribution);
         bm_end();
 
         // Spatial hashing
@@ -269,12 +280,15 @@ int32_t main(void) {
             .map_capacity = 4096,
         };
         bm_begin("spatial-hashing");
-        run(&window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing", uneven_distribution);
+        run(window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing", uneven_distribution);
         bm_end();
 
         bm_dump_json("benchmark-uneven.json");
     }
 
-    window_destroy(&window);
+    if (run_visually) {
+        window_destroy(window);
+    }
+
     return 0;
 }
