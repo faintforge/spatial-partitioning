@@ -9,24 +9,20 @@ typedef struct Benchmark Benchmark;
 struct Benchmark {
     // Stack of benchmarks.
     Benchmark *next;
-    uint32_t box_count;
-    Vec(double) iter_times;
 
+    const char* name;
+    uint32_t run_count;
     double total_ms;
     double average_ms;
     double min_ms;
     double max_ms;
+    HashMap(const char*, Benchmark*) children;
 };
 
 extern double get_time(void);
 
-#define bench_func(t) \
-    double t = 0.0; \
-    for (bool _i_ = (t = get_time(), false); !_i_; _i_ = (t = get_time() - t, true))
+extern void bm_begin(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
+extern void bm_end(void);
+#define bm(fmt, ...) for (bool _i_ = (bm_begin(name, ##__VA_ARGS__), false); !_i_; _i_ = (bm_end(), true))
 
-// Pushes a benchmark onto the stack.
-// Don't free 'iter_times' it's stored within the benchmark. It is freed when
-// 'benchmark_free' is called.
-extern void benchmark_register(Benchmark **benchmark, Vec(double) iter_times, uint32_t box_count);
-extern void benchmark_free(Benchmark *benchmark);
-extern void benchmark_write_json(Benchmark *benchmark, const char *filename);
+extern void bm_dump(void);

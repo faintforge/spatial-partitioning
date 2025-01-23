@@ -1,10 +1,11 @@
 #include "benchmark.h"
 #include "ds.h"
 
-#include <math.h>
+#include <string.h>
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 // Get the unix time stamp in miliseconds.
 double get_time(void) {
@@ -19,76 +20,94 @@ double get_time(void) {
     return (double) (ts.tv_sec-init_ts.tv_sec) * 1e3 + (double) (ts.tv_nsec-init_ts.tv_nsec) / 1e6;
 }
 
-void benchmark_free(Benchmark *benchmark) {
-    if (benchmark == NULL) {
+static size_t str_hash(const void* data, size_t len) {
+    (void) len;
+    char* const* str = data;
+    return fvn1a_hash(*str, strlen(*str));
+}
+
+static int str_cmp(const void* a, const void* b, size_t len) {
+    (void) len;
+    char* const* _a = a;
+    char* const* _b = b;
+    return strcmp(*_a, *_b);
+}
+
+Benchmark root = {0};
+Benchmark *curr = NULL;
+
+void bm_begin(const char* fmt, ...) {
+    HashMapDesc desc = hash_map_desc_default(root.children);
+    desc.hash = str_hash;
+    desc.cmp = str_cmp;
+
+    va_list args;
+    va_start(args, fmt);
+    int len = vsnprintf(NULL, 0, fmt, args);
+    char* name = malloc(len + 1);
+    vsnprintf(name, len + 1, fmt, args);
+    va_end(args);
+    // printf("Name: %s\n", name);
+
+    if (root.children == NULL) {
+        hash_map_new(root.children, desc);
+    }
+
+    Benchmark* bm;
+    if (curr == NULL) {
+        bm = hash_map_get(root.children, name);
+    } else {
+        bm = hash_map_get(curr->children, name);
+    }
+
+    // New benchmark
+    if (bm == NULL) {
+        bm = malloc(sizeof(Benchmark));
+        *bm = (Benchmark) {
+            .name = name,
+        };
+        hash_map_new(bm->children, desc);
+        if (curr == NULL) {
+            hash_map_insert(root.children, name, bm);
+        } else {
+            hash_map_insert(curr->children, name, bm);
+        }
+        printf("New bm: %s\n", name);
+    } else {
+        free(name);
+    }
+
+    bm->run_count++;
+
+    bm->next = curr;
+    curr = bm;
+}
+
+void bm_end(void) {
+    curr = curr->next;
+}
+
+void bm_dump_helper(const Benchmark* bm, int depth) {
+    if (bm == NULL) {
         return;
     }
 
-    benchmark_free(benchmark->next);
-    vec_free(benchmark->iter_times);
-    free(benchmark);
+    char spaces[512] = {0};
+    memset(spaces, ' ', 4 * depth);
+    printf("%s%s\n", spaces, bm->name);
+
+    HashMapIter iter = hash_map_iter_new(bm->children);
+    while (hash_map_iter_valid(bm->children, iter)) {
+        bm_dump_helper(bm->children[iter].value, depth + 1);
+        iter = hash_map_iter_next(bm->children, iter);
+    }
 }
 
-void benchmark_register(Benchmark **benchmark, Vec(double) iter_times, uint32_t box_count) {
-    double total = 0.0f;
-    double min = INFINITY;
-    double max = 0.0f;
-    for (size_t i = 0; i < vec_len(iter_times); i++) {
-        total += iter_times[i];
-        if (iter_times[i] < min) {
-            min = iter_times[i];
-        }
-        if (iter_times[i] > max) {
-            max = iter_times[i];
-        }
+void bm_dump(void) {
+    printf("---------- Benchmark Dump ----------\n");
+    HashMapIter iter = hash_map_iter_new(root.children);
+    while (hash_map_iter_valid(root.children, iter)) {
+        bm_dump_helper(root.children[iter].value, 0);
+        iter = hash_map_iter_next(root.children, iter);
     }
-
-    Benchmark *bm = malloc(sizeof(Benchmark));
-    *bm = (Benchmark) {
-        .next = *benchmark,
-        .box_count = box_count,
-        .iter_times = iter_times,
-
-        .total_ms = total,
-        .min_ms = min,
-        .max_ms = max,
-        .average_ms = total / vec_len(iter_times),
-    };
-    *benchmark = bm;
-}
-
-void benchmark_write_json(Benchmark *benchmark, const char *filename) {
-    FILE *fp = fopen(filename, "wb");
-    if (fp == NULL) {
-        fprintf(stderr, "IO: Failed to open file '%s'.\n", filename);
-        exit(1);
-    }
-
-    fprintf(fp, "[");
-    for (Benchmark *bm = benchmark; bm != NULL; bm = bm->next) {
-        fprintf(fp, "{");
-
-        fprintf(fp, "\"box_count\": %u,", bm->box_count);
-        fprintf(fp, "\"total\": %f,", bm->total_ms);
-        fprintf(fp, "\"average\": %f,", bm->average_ms);
-        fprintf(fp, "\"min\": %f,", bm->min_ms);
-        fprintf(fp, "\"max\": %f", bm->max_ms);
-
-        // fprintf(fp, "\"times\": [");
-        // for (size_t i = 0; i < vec_len(bm->iter_times); i++) {
-        //     fprintf(fp, "%f", bm->iter_times[i]);
-        //     if (i < vec_len(bm->iter_times)-1) {
-        //         fprintf(fp, ",");
-        //     }
-        // }
-        // fprintf(fp, "]");
-
-        fprintf(fp, "}");
-        if (bm->next != NULL) {
-            fprintf(fp, ",");
-        }
-    }
-    fprintf(fp, "]");
-
-    fclose(fp);
 }

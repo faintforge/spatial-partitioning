@@ -85,9 +85,9 @@ struct HashMapDesc {
     int (*cmp)(const void *, const void *, size_t);
 };
 #define hash_map_desc_default(map) (HashMapDesc) { \
-    .key_size = sizeof(map->key), \
-    .value_size = sizeof(map->value), \
-    .bucket_size = sizeof(*map), \
+    .key_size = sizeof(__typeof__(map->key)), \
+    .value_size = sizeof(__typeof__(map->value)), \
+    .bucket_size = sizeof(__typeof__(*map)), \
     .value_offset = offsetof(__typeof__(*map), value), \
     .hash = fvn1a_hash, \
     .cmp = memcmp, \

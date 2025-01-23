@@ -10,7 +10,7 @@ Grid* grid_new(const GridDesc* desc) {
     *grid = (Grid) {
         .world_box = desc->grid_size,
         .cell_count = desc->cell_count,
-        .cells = malloc(desc->cell_count.x*desc->cell_count.y*sizeof(Cell)),
+        .cells = calloc(desc->cell_count.x*desc->cell_count.y, sizeof(Cell)),
     };
     return grid;
 }

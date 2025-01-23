@@ -11,6 +11,7 @@
 #include "grid.h"
 #include "strategy_interface.h"
 
+#include <stdio.h>
 #include <time.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -42,7 +43,7 @@ struct Config {
 const Config config = {
     .box_size = 4,
     .iter = {
-        .count = 32,
+        .count = 1,
         .init_box_count = 0,
         .max_box_count = 1000,
     },
@@ -64,8 +65,10 @@ static void init_boxes(Vec(Box) *boxes, uint32_t count) {
     }
 }
 
-static void benchmark(Window window, Strategy strat, const void* desc, const char* name) {
+static void run(Window window, Strategy strat, const void* desc, const char* name) {
     for (uint32_t box_count = config.iter.init_box_count; box_count <= config.iter.max_box_count; box_count BOX_INCREASE) {
+        bm_begin("box-%u", box_count);
+
         printf("%s: Benchmarking %u boxes with %u iterations...\n", name, box_count, config.iter.count);
 
         Vec(Box) boxes = NULL;
@@ -73,18 +76,25 @@ static void benchmark(Window window, Strategy strat, const void* desc, const cha
 
         void* data = strat.new(desc);
 
-        // Insert all the boxes into the space.
         for (size_t i = 0; i < config.iter.count; i++) {
+            // Insert all the boxes into the space.
+            bm_begin("insert");
             for (size_t i = 0; i < vec_len(boxes); i++) {
                 strat.insert(data, boxes[i]);
             }
+            bm_end();
 
             // Check for collisions.
+            bm_begin("collision");
             Vec(Box) colliding_boxes = NULL;
             Vec(Box) non_colliding_boxes = NULL;
             for (size_t i = 0; i < vec_len(boxes); i++) {
-                bool collided = false;
+                // Query
+                bm_begin("query");
                 Vec(Box) near = strat.query(data, boxes[i]);
+                bm_end();
+
+                bool collided = false;
                 for (size_t j = 0; j < vec_len(near); j++) {
                     if (box_eq(boxes[i], near[j])) {
                         continue;
@@ -101,6 +111,7 @@ static void benchmark(Window window, Strategy strat, const void* desc, const cha
                     vec_push(non_colliding_boxes, boxes[i]);
                 }
             }
+            bm_end();
 
             // Visualize.
             window_clear(window, color_rgb_hex(0x000000));
@@ -131,13 +142,17 @@ static void benchmark(Window window, Strategy strat, const void* desc, const cha
 
             window_present(window);
 
+            bm_begin("clear");
             strat.clear(data);
+            bm_end();
+
             vec_free(colliding_boxes);
             vec_free(non_colliding_boxes);
         }
 
         strat.free(data);
         vec_free(boxes);
+        bm_end();
     }
 }
 
@@ -149,26 +164,40 @@ int32_t main(void) {
         .size = {{config.world.width, config.world.height}},
     };
 
-    benchmark(window, STRATEGY_NAIVE, NULL, "Naive");
+    // Naive
+    bm_begin("naive");
+    run(window, STRATEGY_NAIVE, NULL, "Naive");
+    bm_end();
 
+    // Gird
+    GridDesc grid_desc = {
+        .grid_size = world_box,
+        .cell_count = vec2(16, 16),
+    };
+    bm_begin("grid");
+    run(window, STRATEGY_GRID, &grid_desc, "Grid");
+    bm_end();
+
+    // Quadtree
     QuadtreeDesc qt_desc = {
         .area = world_box,
         .max_depth = 8,
         .max_box_count = 8,
     };
-    benchmark(window, STRATEGY_QUADTREE, &qt_desc, "Quadtree");
+    bm_begin("quadtree");
+    run(window, STRATEGY_QUADTREE, &qt_desc, "Quadtree");
+    bm_end();
 
-    GridDesc grid_desc = {
-        .grid_size = world_box,
-        .cell_count = vec2(16, 16),
-    };
-    benchmark(window, STRATEGY_GRID, &grid_desc, "Grid");
-
+    // Spatial hashing
     SpatialHashDesc sh_desc = {
         .cell_size = vec2s(100.0f),
         .map_capacity = 4096,
     };
-    benchmark(window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing");
+    bm_begin("spatial-hashing");
+    run(window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing");
+    bm_end();
+
+    bm_dump();
 
     window_destroy(&window);
     return 0;
