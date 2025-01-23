@@ -1,39 +1,38 @@
 import matplotlib.pyplot as plt
 import json
+import collections
+import sys
 
-class Data:
-    def __init__(self, name, file) -> None:
-        self.file = file
-        self.name = name
-        with open(file) as fp:
-            self.data = json.load(fp)
+if len(sys.argv) != 3:
+    print("Please pass in a benchmark JSON file and a file prefix.")
+    print(f"{sys.argv[0]} [benchmark] [prefix]")
+    exit(1)
 
-class Graph:
-    def __init__(self) -> None:
-        self.fig, self.ax = plt.subplots()
-        self.ax.set(xlabel="box count", ylabel="time (ms)")
-        self.ax.grid()
+with open(sys.argv[1], "rb") as f:
+    data = json.load(f)
 
-    def plot_data(self, data: Data) -> None:
-        x = []
-        y = []
-        for benchmark in data.data:
-            x.append(benchmark["box_count"])
-            y.append(benchmark["average"])
-        self.ax.plot(x, y, label=data.name);
+def graph(name, data_point):
+    fig, ax = plt.subplots()
+    ax.set(xlabel="box count", ylabel="time (ms)")
+    ax.grid()
+    for strat in data:
+        print(f"{strat}: {sys.argv[2]}-{name}.png")
+        run_times = {}
+        for box_count in data[strat]["children"]:
+            run_times[int(box_count)] = float(data_point(data[strat]["children"][box_count]))
+
+        sorted_run_times = collections.OrderedDict(sorted(run_times.items()))
+        ax.plot(list(sorted_run_times.keys()), list(sorted_run_times.values()), label=strat)
         plt.legend()
 
-    def save(self, filepath: str):
-        self.fig.savefig(filepath)
+    fig.savefig(f"graphs/{sys.argv[2]}-{name}.png")
 
-data = [
-    Data("naive", "naive.json"),
-    Data("grid", "grid.json"),
-    Data("quadtree", "quadtree.json"),
-    Data("spatial hashing", "spatial_hashing.json"),
-]
-
-graph = Graph()
-for d in data:
-    graph.plot_data(d)
-graph.save("graph.png")
+graph("total", lambda box: box["total"])
+graph("insert", lambda box: box["children"]["insert"]["total"])
+graph("collision", lambda box: box["children"]["collision"]["total"])
+def query(box):
+    children = box["children"]["collision"]["children"]
+    if "query" in children:
+        return children["query"]["total"]
+    return 0.0
+graph("query", query)
