@@ -135,4 +135,84 @@ sized array. When inserting into the structure I first hash the coordinate of
 the object, then run a modulo operation on it giving me a number within the
 array bounds, and then it is inserted into the cell.
 
+\section{Material and Method}
+
+\subsection{Linux}
+Linux is the operating system used to develop the application and write this
+paper. The program uses a specific Linux API to acquire the current time as a
+UNIX time stamp. The way to do this would differ on other operating systems.
+
+\subsection{Neovim}
+Neovim was the editor used to edit the code. It is a modal text editor and not a
+full integrated development environment, or IDE as they are called. A plugin
+which utilizes the language server protocol was used to provide me with
+intellisense and to aid in development by warning me about syntax errors.
+
+\subsection{Git}
+Git is a version control system which helps track changes to the project. In
+this project it is utilized to keep a time line of the development process and
+make sure changes could be synced between devices. The local git repository is
+mirrored on GitHub making it accessible from other devices, and the source code
+can be read from the browser.
+
+\subsection{CMake}
+CMake is a buildsystem, used to generate generate the final executable from the
+source code. It aids in compiling and linking the program making cross
+compilation and dependency management trivial.
+
+\subsection{C}
+C was the program of choice for this project due to its low level control.
+Since memory is managed manually in C I could be sure the results would not be
+skewed by a garbage collector running in the middle of a benchmark.
+
+\subsection{SDL2}
+SDL2 - Simple DirectMedia Layer - is a cross-platform library supplying an easy
+API to create a window and render to it. This was crucial when developing since
+visualizing the data structures made it easier to spot errors than simply
+looking at the code. It also gives a nice visual representation of the program.
+
+\subsection{Python}
+Python is an interpreted programming language which was used for making a script
+to generate graphs. All the graphs used in this paper was generated from data
+collected from a C program, which dumped said data into a JSON file, which was
+then read by a Python script using the matplotlib library to generate nice
+looking graphs.
+
+\newpage
+
+\section{Results}
+This section presents the results of the benchmarking done on the three
+strategies - quadtrees, spatial hashing and static grids. The metrics measured
+was average runtime: the sum of all operations needed to run the program.
+Insertions: how long it took to insert all the objects into the data structure.
+Collision testing: total time spent checking objects against each other, which
+includes querying. Querying: average time spent retrieving objects from the data
+structure. Clearing: how long it takes to reset the data structure making it
+ready for rebuilding. Each metric was measured with a range of object count,
+labeled as 'box count' in the graphs, from ten to 2500 with an increase of ten
+objects between each measurement. At each stage was run 32 times and the results
+were averaged to give smoother graphs. Two benchmarks was run, one with an even
+distribution of objects and one with an uneven distribution.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.75\textwidth]{even-naive.png}
+    \caption{Runtime of naive solution and partitioning strategies.}
+    \label{fig:naive}
+\end{figure}
+
+Figure \ref{fig:naive} shows a drastic difference in runtime between the naive
+solution and the optimization strategies. It is hard to evaluate which strategy
+performs best due to the stark difference between the naive and the optimized
+versions. Due to this discrepancy the naive solution will not be included in the
+other graphs presented. This comparison was only run with 1000 objects due to
+the time taken per execution.
+
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=0.75\textwidth]{even-average.png}
+%     \caption{Average runtime of spatial partitioning strategies.}
+%     \label{fig:even-average}
+% \end{figure}
+
 \end{document}
