@@ -1,0 +1,124 @@
+\documentclass[a4paper, 12pt]{article}
+
+\usepackage[utf8]{inputenc} % For UTF-8 encoding
+\usepackage[english]{babel} % For English language settings
+% \usepackage{amsmath}        % For mathematical symbols
+% \usepackage{graphicx}       % For including images
+% \usepackage{hyperref}       % For hyperlinks
+\usepackage[margin=1in]{geometry}       % To set margins
+% \usepackage{float}          % For controlling figure placement
+% \usepackage{booktabs}       % For better table formatting
+
+\renewcommand{\baselinestretch}{1.15}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.8em}
+
+\title{Comparison of Spatial Partitioning Strategies}
+\author{Linus Kåreblom}
+\date{\today}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+
+    {\Huge \textbf{Comparison of Spatial Partitioning Strategies}}\\[1.5cm]
+
+    {\large Linus Kåreblom}\\[1cm]
+
+    \vfill
+
+    Technical program Academic year 2024/2025\\
+    \textbf{School:} Österänggymnasiet\\
+    \textbf{Class:} TE3A\\
+    \textbf{Supervisor:} Tony Tieu\\
+
+    \vspace{1cm}
+    {\today}
+\end{titlepage}
+
+\begin{abstract}
+    This is the abstract of my paper.
+\end{abstract}
+
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+When I was developing a small physics engine, I encountered performance issues
+during the  collision detection phase. In this phase the program figures out
+which objects are close enough to be touching and overlapping. This wouldn't be
+an issue in a small simulation with few objects, but I was striving for
+something grand running in real time which made every millisecond count. Due to
+these constraints I had to find a way to speed things up.
+
+On my optimization journey I encountered the concept of spatial partitioning -
+an elegant solution to my problem. Diving deeper I discovered the three
+techniques I'll be comparing in this paper, along side the naive solution. The
+basic theory of the technique is simply to group objects close to each other to
+avoid checking two objects on the opposite side of the world. This drastically
+decreases the number of collision checks performed each frame.
+
+As a consequence of this constraint I had to find a way to optimize this phase.
+That is what sent me down the rabbit hole of spatial partitioning as an
+optimization to do query objects close to each other in space. During my
+research I found out about the three strategies I'm comparing in this paper. I'm
+doing this paper within the programming course.
+
+\section{Theory}
+\subsection{Spatial Partitioning}
+Spatial partitioning is an optimization technique used to make programs run
+faster. It's often found within physics applications. The theory behind this
+technique is to reduce the number of times one object is checked against
+another. Suppose we have one hundred objects in our world. The naive way to
+check each one of these against the others results in a ten thousand checks.
+Since checks are expensive to make, we want to perform as few of them as
+possible.
+
+\subsection{Quadtree}
+A quadtree is a recursive data structure, meaning it contains pointers to each
+objects of the same type as itself. It's in the family of tree data structures.
+The data structure is comprised of nodes. Each node has four pointers to other
+nodes, could also be referred to as branches.
+
+\subsection{The Stack and Heap}
+A program uses two different types of memory, the stack and the heap. When the
+program starts a fixed amount of bytes are allocated for the program to use,
+this is what is called the stack. When the program creates a variable it is
+allocated on the stack, which is done by incrementing the stack pointer by the
+size of the variable data type. Since a stack allocation is only a single
+instruction it is incredibly fast. The heap is much larger than the stack but
+slower because you have to request space within it from the operating system.
+Allocating is considered to be a slow operation since there's a lot of overhead
+introduced.
+
+\subsection{Big O notation}
+Big O notation is a notation system to describe the time complexity of an
+algorithm. If an algorithm has the time complexity of $O(n)$ then that means
+its time complexity grows linearly with the amount of inputs $n$. This could be
+deceiving due to a hidden constant within the expression. If $O(n)$ would be
+written as a function to describe the actual execution time of the algorithm
+then it would look like this $T(n) = C \cdot n$. A $O(n^{2})$ algorithm would
+be considered worse than an $O(n)$ one. This assumption is, however, not always
+correct. If $n$ is small enough then the $O(n^{2})$ algorithm could run faster
+due to the constant being smaller than its $O(n)$ equivalent.
+
+\subsection{Static Grid}
+The static grid is built using a simple array. Indexing into the array is an
+$O(1)$ operation. The caveat with this approach is you're forced to know how
+big the area you want the to partition to be before compiling the program. Both
+insertion and querying only requires a simple index into the grid array which
+makes this approach super fast.
+
+\subsection{Spatial Hashing Grid}
+The spatial hashing grid is built using the same technique as a hash map. The
+method I used to write my spatial hashing grid was to allocate an arbitrarily
+sized array. When inserting into the structure I first hash the coordinate of
+the object, then run a modulo operation on it giving me a number within the
+array bounds, and then it is inserted into the cell.
+
+\end{document}

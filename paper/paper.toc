@@ -1,0 +1,9 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{3}{}%
+\contentsline {section}{\numberline {2}Theory}{3}{}%
+\contentsline {subsection}{\numberline {2.1}Spatial Partitioning}{3}{}%
+\contentsline {subsection}{\numberline {2.2}Quadtree}{3}{}%
+\contentsline {subsection}{\numberline {2.3}The Stack and Heap}{4}{}%
+\contentsline {subsection}{\numberline {2.4}Big O notation}{4}{}%
+\contentsline {subsection}{\numberline {2.5}Static Grid}{4}{}%
+\contentsline {subsection}{\numberline {2.6}Spatial Hashing Grid}{4}{}%
