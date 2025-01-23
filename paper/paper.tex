@@ -1,22 +1,16 @@
 \documentclass[a4paper, 12pt]{article}
 
-\usepackage[utf8]{inputenc} % For UTF-8 encoding
-\usepackage[english]{babel} % For English language settings
-% \usepackage{amsmath}        % For mathematical symbols
-% \usepackage{graphicx}       % For including images
-% \usepackage{hyperref}       % For hyperlinks
-\usepackage[margin=1in]{geometry}       % To set margins
-% \usepackage{float}          % For controlling figure placement
-% \usepackage{booktabs}       % For better table formatting
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage[margin=1in]{geometry}
+\usepackage{svg}
 
 \renewcommand{\baselinestretch}{1.15}
-
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.8em}
 
-\title{Comparison of Spatial Partitioning Strategies}
-\author{Linus Kåreblom}
-\date{\today}
+\graphicspath{ {../graphs/} }
 
 \begin{document}
 
@@ -40,7 +34,18 @@
 \end{titlepage}
 
 \begin{abstract}
-    This is the abstract of my paper.
+    Spatial partitioning is a widely used optimization strategy to efficiently
+    optimize objects in space. It can be found in many applications, from
+    simulating galaxies to video games.
+    Checking collision between objects is an expensive operation that quickly
+    becomes a bottleneck as the number of objects grow.
+    This paper compares three different strategies, alongside a naive solution.
+    The aim is to evaluate the use cases for the different strategies.
+    Each strategy was implemented to fit the same interface to make it as fair
+    of a comparison as possible.
+    The results show how spatial hashing out performs every other method when
+    the objects are distributed evenly while quadtrees excel with uneven object
+    distribution.
 \end{abstract}
 
 \newpage
@@ -83,7 +88,16 @@ possible.
 A quadtree is a recursive data structure, meaning it contains pointers to each
 objects of the same type as itself. It's in the family of tree data structures.
 The data structure is comprised of nodes. Each node has four pointers to other
-nodes, could also be referred to as branches.
+nodes, could also be referred to as branches or leaves. This strategy works by
+inserting points into a leaf until the leaf reaches its capacity, then it splits
+into four equally large sub leaves. This subdivision pattern is shown in figure
+\ref{fig:quadtree}.
+
+\begin{figure}[ht]
+    \includesvg[width=\textwidth]{images/invert-quadtree.svg}
+    \caption{Visual representation of a quadtree.}
+    \label{fig:quadtree}
+\end{figure}
 
 \subsection{The Stack and Heap}
 A program uses two different types of memory, the stack and the heap. When the
