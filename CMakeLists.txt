@@ -19,6 +19,7 @@ add_executable(${CMAKE_PROJECT_NAME}
     src/benchmark.c
     src/grid.c
     src/hashing.c
+    src/naive.c
 )
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE include)
 target_link_libraries(${CMAKE_PROJECT_NAME} m SDL2)

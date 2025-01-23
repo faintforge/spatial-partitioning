@@ -32,12 +32,19 @@ struct Quadtree {
     uint32_t max_box_count;
 };
 
-extern Quadtree quadtree_new(Box area, int max_depth, int max_box_count);
+typedef struct QuadtreeDesc QuadtreeDesc;
+struct QuadtreeDesc {
+    Box area;
+    int max_depth;
+    int max_box_count;
+};
+
+extern Quadtree* quadtree_new(const QuadtreeDesc* desc);
 extern void quadtree_free(Quadtree *quadtree);
 
 extern void quadtree_insert(Quadtree *quadtree, Box box);
 extern void quadtree_clear(Quadtree *quadtree);
 
-extern Vec(Box) quadtree_query(Quadtree quadtree, Box area);
+extern Vec(Box) quadtree_query(const Quadtree* quadtree, Box area);
 
-extern void quadtree_debug_draw(Quadtree quadtree, SDL_Renderer *renderer);
+extern void quadtree_debug_draw(const Quadtree* quadtree, SDL_Renderer *renderer);

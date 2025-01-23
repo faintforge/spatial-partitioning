@@ -1,4 +1,5 @@
 #include "hashing.h"
+#include <SDL2/SDL_render.h>
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
@@ -12,13 +13,13 @@ static uint64_t hash_position(int32_t x, int32_t y) {
     return full;
 }
 
-SpatialHash spatial_hash_new(uint32_t map_capacity, Vec2 cell_size) {
-    SpatialHash space = {
-        .cell_size = cell_size,
-        .map_capacity = map_capacity,
-        .buckets = calloc(map_capacity, sizeof(Bucket)),
+SpatialHash* spatial_hash_new(const SpatialHashDesc* desc) {
+    SpatialHash* space = malloc(sizeof(SpatialHash));
+    *space = (SpatialHash) {
+        .cell_size = desc->cell_size,
+        .map_capacity = desc->map_capacity,
+        .buckets = calloc(desc->map_capacity, sizeof(Bucket)),
     };
-
     return space;
 }
 
@@ -54,21 +55,21 @@ void spatial_hash_clear(SpatialHash *space) {
     }
 }
 
-Vec(Box) spatial_hash_query(SpatialHash space, Box area) {
+Vec(Box) spatial_hash_query(const SpatialHash* space, Box area) {
     Vec(Box) result = NULL;
 
-    Vec2 min = vec2_div(area.pos, space.cell_size);
+    Vec2 min = vec2_div(area.pos, space->cell_size);
     min.x = floorf(min.x);
     min.y = floorf(min.y);
-    Vec2 max = vec2_div(vec2_add(area.pos, area.size), space.cell_size);
+    Vec2 max = vec2_div(vec2_add(area.pos, area.size), space->cell_size);
     max.x = ceilf(max.x);
     max.y = ceilf(max.y);
 
     for (int32_t y = min.y; y < max.y; y++) {
         for (int32_t x = min.x; x < max.x; x++) {
             uint64_t hash = hash_position(x, y);
-            uint64_t index = hash % space.map_capacity;
-            Bucket *bucket = &space.buckets[index];
+            uint64_t index = hash % space->map_capacity;
+            Bucket *bucket = &space->buckets[index];
             for (uint32_t i = 0; i < bucket->box_i; i++) {
                 vec_push(result, bucket->boxes[i]);
             }
@@ -78,20 +79,30 @@ Vec(Box) spatial_hash_query(SpatialHash space, Box area) {
     return result;
 }
 
-void spatial_hash_debug_draw(SpatialHash space, uint32_t horizontal_count, uint32_t vertical_count, SDL_Renderer *renderer) {
+void spatial_hash_debug_draw(const SpatialHash* space, SDL_Renderer *renderer) {
+    int32_t vertical_count;
+    int32_t horizontal_count;
+    SDL_GetRendererOutputSize(renderer, &horizontal_count, &vertical_count);
+
+    horizontal_count /= space->cell_size.x;
+    vertical_count /= space->cell_size.y;
+
+    horizontal_count++;
+    vertical_count++;
+
     Vec2 pos = vec2s(0.0f); 
-    for (uint32_t y = 0; y < vertical_count; y++) {
-        for (uint32_t x = 0; x < horizontal_count; x++) {
+    for (int32_t y = 0; y < vertical_count; y++) {
+        for (int32_t x = 0; x < horizontal_count; x++) {
             SDL_Rect rect = {
                 .x = pos.x,
                 .y = pos.y,
-                .w = space.cell_size.x,
-                .h = space.cell_size.y,
+                .w = space->cell_size.x,
+                .h = space->cell_size.y,
             };
             SDL_RenderDrawRect(renderer, &rect);
-            pos.x += space.cell_size.x;
+            pos.x += space->cell_size.x;
         }
         pos.x = 0.0f;
-        pos.y += space.cell_size.y;
+        pos.y += space->cell_size.y;
     }
 }

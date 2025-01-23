@@ -83,17 +83,18 @@ static void quadtree_node_insert(Quadtree *quadtree, QuadtreeNode *node, Box box
     node->boxes[node->box_i++] = box;
 }
 
-Quadtree quadtree_new(Box area, int max_depth, int max_box_count) {
-    size_t max_node_count = powf(4, max_depth);
-    Quadtree quadtree = {
-        .max_depth = max_depth,
-        .max_box_count = max_box_count,
+Quadtree* quadtree_new(const QuadtreeDesc* desc) {
+    size_t max_node_count = powf(4, desc->max_depth);
+    Quadtree* quadtree = malloc(sizeof(Quadtree));
+    *quadtree = (Quadtree) {
+        .max_depth = desc->max_depth,
+        .max_box_count = desc->max_box_count,
         .node_pool = malloc(max_node_count * sizeof(QuadtreeNode)),
         .node_pool_i = 1,
     };
 
-    quadtree.node_pool[0] = (QuadtreeNode) {
-        .area = area,
+    quadtree->node_pool[0] = (QuadtreeNode) {
+        .area = desc->area,
     };
 
     return quadtree;
@@ -116,6 +117,7 @@ Quadtree quadtree_new(Box area, int max_depth, int max_box_count) {
 
 void quadtree_free(Quadtree *quadtree) {
     free(quadtree->node_pool);
+    free(quadtree);
 }
 
 void quadtree_insert(Quadtree *quadtree, Box box) {
@@ -129,7 +131,7 @@ void quadtree_clear(Quadtree *quadtree) {
     };
 }
 
-void quadtree_query_helper(QuadtreeNode *node, Box area, Vec(Box) *result) {
+void quadtree_query_helper(const QuadtreeNode *node, Box area, Vec(Box) *result) {
     if (node == NULL || !box_overlapp(node->area, area)) {
         return;
     }
@@ -142,13 +144,13 @@ void quadtree_query_helper(QuadtreeNode *node, Box area, Vec(Box) *result) {
     vec_insert_arr(*result, vec_len(*result), node->boxes, node->box_i);
 }
 
-Vec(Box) quadtree_query(Quadtree quadtree, Box area) {
+Vec(Box) quadtree_query(const Quadtree* quadtree, Box area) {
     Vec(Box) result = NULL;
-    quadtree_query_helper(&quadtree.node_pool[0], area, &result);
+    quadtree_query_helper(&quadtree->node_pool[0], area, &result);
     return result;
 }
 
-void quadtree_debug_draw_helper(QuadtreeNode *node, SDL_Renderer *renderer) {
+void quadtree_debug_draw_helper(const QuadtreeNode *node, SDL_Renderer *renderer) {
     if (node == NULL) {
         return;
     }
@@ -167,6 +169,6 @@ void quadtree_debug_draw_helper(QuadtreeNode *node, SDL_Renderer *renderer) {
     SDL_RenderDrawRect(renderer, &rect);
 }
 
-void quadtree_debug_draw(Quadtree quadtree, SDL_Renderer *renderer) {
-    quadtree_debug_draw_helper(&quadtree.node_pool[0], renderer);
+void quadtree_debug_draw(const Quadtree* quadtree, SDL_Renderer *renderer) {
+    quadtree_debug_draw_helper(&quadtree->node_pool[0], renderer);
 }

@@ -5,11 +5,12 @@
 #include <math.h>
 #include <stdio.h>
 
-Grid grid_new(Box grid_size, Vec2 cell_count) {
-    Grid grid = {
-        .world_box = grid_size,
-        .cell_count = cell_count,
-        .cells = malloc(cell_count.x*cell_count.y*sizeof(Cell)),
+Grid* grid_new(const GridDesc* desc) {
+    Grid* grid = malloc(sizeof(Grid));
+    *grid = (Grid) {
+        .world_box = desc->grid_size,
+        .cell_count = desc->cell_count,
+        .cells = malloc(desc->cell_count.x*desc->cell_count.y*sizeof(Cell)),
     };
     return grid;
 }
@@ -41,8 +42,8 @@ void grid_insert(Grid *grid, Box box) {
     }
 }
 
-Vec(Box) grid_query(Grid grid, Box area) {
-    const Vec2 cell_size = vec2_div(grid.world_box.size, grid.cell_count);
+Vec(Box) grid_query(const Grid* grid, Box area) {
+    const Vec2 cell_size = vec2_div(grid->world_box.size, grid->cell_count);
 
     Vec2 top_left = vec2_div(area.pos, cell_size);
     top_left.x = floorf(top_left.x);
@@ -55,7 +56,7 @@ Vec(Box) grid_query(Grid grid, Box area) {
     Vec(Box) result = NULL;
     for (int32_t y = top_left.y; y < bottom_right.y; y++) {
         for (int32_t x = top_left.x; x < bottom_right.x; x++) {
-            Cell cell = grid.cells[x+y*(int) grid.cell_count.x];
+            Cell cell = grid->cells[x+y*(int) grid->cell_count.x];
             for (uint32_t i = 0; i < cell.box_i; i++) {
                 vec_push(result, cell.boxes[i]);
             }
@@ -65,18 +66,17 @@ Vec(Box) grid_query(Grid grid, Box area) {
     return result;
 }
 
-void grid_reset(Grid *grid) {
+void grid_clear(Grid *grid) {
     for (uint32_t i = 0; i < grid->cell_count.x*grid->cell_count.y; i++) {
         grid->cells[i].box_i = 0;
     }
 }
 
-void grid_debug_draw(Grid grid, SDL_Renderer *renderer) {
-    const Vec2 cell_size = vec2_div(grid.world_box.size, grid.cell_count);
+void grid_debug_draw(const Grid* grid, SDL_Renderer *renderer) {
+    const Vec2 cell_size = vec2_div(grid->world_box.size, grid->cell_count);
     Vec2 pos = vec2s(0.0f); 
-    for (uint32_t y = 0; y < grid.cell_count.y; y++) {
-        for (uint32_t x = 0; x < grid.cell_count.x; x++) {
-            Cell cell = grid.cells[x+y*(int) grid.cell_count.x];
+    for (uint32_t y = 0; y < grid->cell_count.y; y++) {
+        for (uint32_t x = 0; x < grid->cell_count.x; x++) {
             SDL_Rect rect = {
                 .x = pos.x,
                 .y = pos.y,

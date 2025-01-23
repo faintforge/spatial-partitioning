@@ -20,12 +20,18 @@ struct Grid {
     Cell *cells;
 };
 
-extern Grid grid_new(Box grid_size, Vec2 cell_count);
+typedef struct GridDesc GridDesc;
+struct GridDesc {
+    Box grid_size;
+    Vec2 cell_count;
+};
+
+extern Grid* grid_new(const GridDesc* desc);
 extern void grid_free(Grid *grid);
 
 extern void grid_insert(Grid *grid, Box box);
-extern void grid_reset(Grid *grid);
+extern void grid_clear(Grid *grid);
 
-extern Vec(Box) grid_query(Grid grid, Box area);
+extern Vec(Box) grid_query(const Grid* grid, Box area);
 
-extern void grid_debug_draw(Grid grid, SDL_Renderer *renderer);
+extern void grid_debug_draw(const Grid* grid, SDL_Renderer *renderer);

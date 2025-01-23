@@ -21,12 +21,18 @@ struct SpatialHash {
     Bucket *buckets;
 };
 
-extern SpatialHash spatial_hash_new(uint32_t map_capacity, Vec2 cell_size); 
+typedef struct SpatialHashDesc SpatialHashDesc;
+struct SpatialHashDesc {
+    uint32_t map_capacity;
+    Vec2 cell_size;
+};
+
+extern SpatialHash* spatial_hash_new(const SpatialHashDesc* desc);
 extern void spatial_hash_free(SpatialHash *space);
 
 extern void spatial_hash_insert(SpatialHash *space, Box box);
 extern void spatial_hash_clear(SpatialHash *space);
 
-extern Vec(Box) spatial_hash_query(SpatialHash space, Box area);
+extern Vec(Box) spatial_hash_query(const SpatialHash* space, Box area);
 
-extern void spatial_hash_debug_draw(SpatialHash space, uint32_t horizontal_count, uint32_t vertical_count, SDL_Renderer *renderer);
+extern void spatial_hash_debug_draw(const SpatialHash* space, SDL_Renderer *renderer);
