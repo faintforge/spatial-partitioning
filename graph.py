@@ -13,7 +13,7 @@ with open(sys.argv[1], "rb") as f:
 
 def graph(name, data_point, include_naive=False):
     fig, ax = plt.subplots()
-    ax.set(xlabel="box count", ylabel="time (ms)")
+    ax.set(xlabel="Objects", ylabel="Time (ms)")
     ax.grid()
     for strat in data:
         if not include_naive and strat == "naive":

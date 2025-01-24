@@ -47,7 +47,7 @@ const Config config = {
     .iter = {
         .count = 32,
         .init_box_count = 10,
-        .max_box_count = 1000,
+        .max_box_count = 2500,
     },
     .world = {
         .width = 1280,
@@ -220,7 +220,7 @@ int32_t main(void) {
             .grid_size = world_box,
             .cell_count = vec2(16, 16),
         };
-        bm_begin("grid");
+        bm_begin("Grid");
         run(window, STRATEGY_GRID, &grid_desc, "Grid", even_distribution);
         bm_end();
 
@@ -230,7 +230,7 @@ int32_t main(void) {
             .max_depth = 8,
             .max_box_count = 8,
         };
-        bm_begin("quadtree");
+        bm_begin("Quadtree");
         run(window, STRATEGY_QUADTREE, &qt_desc, "Quadtree", even_distribution);
         bm_end();
 
@@ -239,7 +239,7 @@ int32_t main(void) {
             .cell_size = vec2s(100.0f),
             .map_capacity = 4096,
         };
-        bm_begin("spatial-hashing");
+        bm_begin("Spatial Hashing");
         run(window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing", even_distribution);
         bm_end();
 
@@ -260,7 +260,7 @@ int32_t main(void) {
             .grid_size = world_box,
             .cell_count = vec2(16, 16),
         };
-        bm_begin("grid");
+        bm_begin("Grid");
         run(window, STRATEGY_GRID, &grid_desc, "Grid", uneven_distribution);
         bm_end();
 
@@ -270,7 +270,7 @@ int32_t main(void) {
             .max_depth = 8,
             .max_box_count = 8,
         };
-        bm_begin("quadtree");
+        bm_begin("Quadtree");
         run(window, STRATEGY_QUADTREE, &qt_desc, "Quadtree", uneven_distribution);
         bm_end();
 
@@ -279,7 +279,7 @@ int32_t main(void) {
             .cell_size = vec2s(100.0f),
             .map_capacity = 4096,
         };
-        bm_begin("spatial-hashing");
+        bm_begin("Spatial Hashing");
         run(window, STRATEGY_SPATIAL_HASHING, &sh_desc, "Spatial Hashing", uneven_distribution);
         bm_end();
 

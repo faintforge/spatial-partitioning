@@ -196,7 +196,7 @@ distribution of objects and one with an uneven distribution.
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.75\textwidth]{even-naive.png}
+    \includegraphics[width=0.5\textwidth]{even-naive.png}
     \caption{Runtime of naive solution and partitioning strategies.}
     \label{fig:naive}
 \end{figure}
@@ -208,11 +208,105 @@ versions. Due to this discrepancy the naive solution will not be included in the
 other graphs presented. This comparison was only run with 1000 objects due to
 the time taken per execution.
 
-% \begin{figure}[h]
-%     \centering
-%     \includegraphics[width=0.75\textwidth]{even-average.png}
-%     \caption{Average runtime of spatial partitioning strategies.}
-%     \label{fig:even-average}
-% \end{figure}
+\subsection{Average Runtime}
+
+\subsubsection{Evenly Distributed Objects}
+Figure \ref{fig:even-average} shows the average runtime for the program
+using the different strategies with an even object distribution. This includes
+all other measuring metrics. The X axis describes the amount of objects being
+processed. The Y axis describes how much time was spent in milliseconds
+executing the particular step in the program.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{even-average.png}
+    \caption{Average runtime of spatial partitioning strategies with evenly
+    distributed objects.}
+    \label{fig:even-average}
+\end{figure}
+
+\subsubsection{Unevenly Distributed Objects}
+Figure \ref{fig:uneven-average} presents the average runtime for the program
+using the different strategies with an uneven object distribution. This includes
+all other measuring metrics. As the object count increases the spatial hashing
+trends towards a $O(n^2)$ runtime complexity.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{uneven-average.png}
+    \caption{Average runtime of spatial partitioning strategies with unevenly
+    distributed objects.}
+    \label{fig:uneven-average}
+\end{figure}
+
+\subsection{Insertion}
+
+\subsubsection{Evenly Distributed Objects}
+The runtime complexity of the insertion algorithms for evenly distributed
+objects is shown in figure \ref{fig:even-insert}.
+\begin{figure}[h]
+    \centering
+    \caption{Average insertion time per object with evenly distributed objects.}
+    \includegraphics[width=0.5\textwidth]{even-insert.png}
+    \label{fig:even-insert}
+\end{figure}
+
+\subsubsection{Unevenly Distributed Objects}
+The runtime complexity of the insertion algorithms for evenly distributed
+objects is shown in figure \ref{fig:uneven-insert}.
+\begin{figure}[h]
+    \centering
+    \caption{Average insertion time per object with unevenly distributed
+    objects.}
+    \includegraphics[width=0.5\textwidth]{uneven-insert.png}
+    \label{fig:uneven-insert}
+\end{figure}
+
+\subsection{Collision}
+
+\subsubsection{Evenly Distributed Objects}
+Figure \ref{fig:even-collision} shows the total time spent checking for
+colliding objects per iteration with an even distribution. This time also
+includes the time taken for querying.
+\begin{figure}[h]
+    \centering
+    \caption{Average collision time for all objects with evenly distributed
+    objects.}
+    \includegraphics[width=0.5\textwidth]{even-collision.png}
+    \label{fig:even-collision}
+\end{figure}
+
+\subsubsection{Unevenly Distributed Objects}
+Figure \ref{fig:uneven-collision} shows the total time spent checking for
+colliding objects per iteration with an uneven distribution. This time also
+includes the time taken for querying.
+\begin{figure}[h]
+    \centering
+    \caption{Average collision time for all objects with unevenly distributed
+    objects.}
+    \includegraphics[width=0.5\textwidth]{uneven-collision.png}
+    \label{fig:uneven-collision}
+\end{figure}
+
+\subsection{Querying}
+
+\subsubsection{Evenly Distributed Objects}
+Figure \ref{fig:even-query} represents the average time taken to query the space
+per object with an even distribution.
+\begin{figure}[h]
+    \centering
+    \caption{Average query time per object with evenly distributed objects.}
+    \includegraphics[width=0.5\textwidth]{even-query.png}
+    \label{fig:even-query}
+\end{figure}
+
+\subsubsection{Unevenly Distributed Objects}
+Figure \ref{fig:uneven-query} represents the average time taken to query the space
+per object with an uneven distribution.
+\begin{figure}[h]
+    \centering
+    \caption{Average query time per object with unevenly distributed objects.}
+    \includegraphics[width=0.5\textwidth]{uneven-query.png}
+    \label{fig:uneven-query}
+\end{figure}
 
 \end{document}
