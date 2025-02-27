@@ -5,6 +5,7 @@
 \usepackage{graphicx}
 \usepackage[margin=1in]{geometry}
 \usepackage{svg}
+\usepackage{float}
 
 \renewcommand{\baselinestretch}{1.15}
 \setlength{\parindent}{0pt}
@@ -56,14 +57,14 @@
 \section{Introduction}
 When I was developing a small physics engine, I encountered performance issues
 during the  collision detection phase. In this phase the program figures out
-which objects are close enough to be touching and overlapping. This wouldn't be
+which objects are close enough to be touching and overlapping. This would not be
 an issue in a small simulation with few objects, but I was striving for
 something grand running in real time which made every millisecond count. Due to
 these constraints I had to find a way to speed things up.
 
 On my optimization journey I encountered the concept of spatial partitioning -
 an elegant solution to my problem. Diving deeper I discovered the three
-techniques I'll be comparing in this paper, along side the naive solution. The
+techniques I will be comparing in this paper, along side the naive solution. The
 basic theory of the technique is simply to group objects close to each other to
 avoid checking two objects on the opposite side of the world. This drastically
 decreases the number of collision checks performed each frame.
@@ -71,13 +72,36 @@ decreases the number of collision checks performed each frame.
 As a consequence of this constraint I had to find a way to optimize this phase.
 That is what sent me down the rabbit hole of spatial partitioning as an
 optimization to do query objects close to each other in space. During my
-research I found out about the three strategies I'm comparing in this paper. I'm
-doing this paper within the programming course.
+research I found out about the three strategies I am comparing in this paper. I
+am doing this paper within the programming course.
+
+\section{Purpose \& Scope}
+The purpose of this paper is to find the most optimal strategy for dividing up
+space to improve the speed of spatial querying of nearby objects.
+
+This study focuses mainly on CPU performance and runtime in exchange for less
+memory efficient implementation. Therefore time based evaluations of insertion,
+query time, clearing time and general collision testing time will be performed.
+
+The strategies are going to be evaluated on time based metrics - insertion,
+query, clearing and time spend doing collision testing. These evaluations are
+going to take place with two different distribution strategies of the objects
+though the same seed will be used for all tests so the pseudo-random numbers
+stay the same.
+
+These strategies could be extended into the third dimension but this study
+focuses solely focused on two dimensional space.
+
+The questions I'm going to answer are:
+\begin{itemize}
+    \item At what point is it worth implementing a more advanced data structure?
+    \item In what use case are the different algorithms most useful?
+\end{itemize}
 
 \section{Theory}
 \subsection{Spatial Partitioning}
 Spatial partitioning is an optimization technique used to make programs run
-faster. It's often found within physics applications. The theory behind this
+faster. It is often found within physics applications. The theory behind this
 technique is to reduce the number of times one object is checked against
 another. Suppose we have one hundred objects in our world. The naive way to
 check each one of these against the others results in a ten thousand checks.
@@ -86,7 +110,7 @@ possible.
 
 \subsection{Quadtree}
 A quadtree is a recursive data structure, meaning it contains pointers to each
-objects of the same type as itself. It's in the family of tree data structures.
+objects of the same type as itself. It is in the family of tree data structures.
 The data structure is comprised of nodes. Each node has four pointers to other
 nodes, could also be referred to as branches or leaves. This strategy works by
 inserting points into a leaf until the leaf reaches its capacity, then it splits
@@ -107,7 +131,7 @@ allocated on the stack, which is done by incrementing the stack pointer by the
 size of the variable data type. Since a stack allocation is only a single
 instruction it is incredibly fast. The heap is much larger than the stack but
 slower because you have to request space within it from the operating system.
-Allocating is considered to be a slow operation since there's a lot of overhead
+Allocating is considered to be a slow operation since there is a lot of overhead
 introduced.
 
 \subsection{Big O notation}
@@ -123,17 +147,34 @@ due to the constant being smaller than its $O(n)$ equivalent.
 
 \subsection{Static Grid}
 The static grid is built using a simple array. Indexing into the array is an
-$O(1)$ operation. The caveat with this approach is you're forced to know how
+$O(1)$ operation. The caveat with this approach is you are forced to know how
 big the area you want the to partition to be before compiling the program. Both
 insertion and querying only requires a simple index into the grid array which
 makes this approach super fast.
+
+\subsection{Hash Map}
+A hash map is a data structure which key value pairs allowing for aliasing of
+values. For example, a hash map using strings as keys and integers as values
+could map the key "life" to the value 42, meaning a query into the hash map for
+"life" would return 42. The way this works is by using a cryptographic hashing
+function to generate a unique hash for the object. This hash is a simple number
+which is usually very large. To make the hash useful you run modulo on it to
+make sure it's between zero and the number of buckets inside the hash map. The
+same method is used for retrieval, first running the key through the same
+hashing function, then wrapping it using modulo and returning what lies in the
+bucket. The only caveat with this is there could be collisions within the hash
+map. Two hashes could wrap into the same index. There are a multitude of ways to
+handle collisions like open addressing and separate chaining.
 
 \subsection{Spatial Hashing Grid}
 The spatial hashing grid is built using the same technique as a hash map. The
 method I used to write my spatial hashing grid was to allocate an arbitrarily
 sized array. When inserting into the structure I first hash the coordinate of
 the object, then run a modulo operation on it giving me a number within the
-array bounds, and then it is inserted into the cell.
+array bounds, and then it is inserted into the cell. No collision resolution is
+taking place inside the structure meaning two cells could have the same bucket
+index which means queries for the one of the cells returns the objects in the
+other as well.
 
 \section{Material and Method}
 
@@ -180,21 +221,21 @@ looking graphs.
 
 \newpage
 
-\section{Results}
-This section presents the results of the benchmarking done on the three
-strategies - quadtrees, spatial hashing and static grids. The metrics measured
-was average runtime: the sum of all operations needed to run the program.
-Insertions: how long it took to insert all the objects into the data structure.
-Collision testing: total time spent checking objects against each other, which
-includes querying. Querying: average time spent retrieving objects from the data
-structure. Clearing: how long it takes to reset the data structure making it
-ready for rebuilding. Each metric was measured with a range of object count,
-labeled as 'box count' in the graphs, from ten to 2500 with an increase of ten
-objects between each measurement. At each stage was run 32 times and the results
-were averaged to give smoother graphs. Two benchmarks was run, one with an even
-distribution of objects and one with an uneven distribution.
+\section{Results \& Analysis}
+This section presents the results and offers an analysis of the benchmarking
+done on the three strategies - quadtrees, spatial hashing and static grids. The
+metrics measured was average runtime: the sum of all operations needed to run
+the program. Insertions: how long it took to insert all the objects into the
+data structure. Collision testing: total time spent checking objects against
+each other, which includes querying. Querying: average time spent retrieving
+objects from the data structure. Clearing: how long it takes to reset the data
+structure making it ready for rebuilding. Each metric was measured with a range
+of object count, labeled as 'box count' in the graphs, from ten to 2500 with an
+increase of ten objects between each measurement. At each stage was run 32 times
+and the results were averaged to give smoother graphs. Two benchmarks was run,
+one with an even distribution of objects and one with an uneven distribution.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.5\textwidth]{even-naive.png}
     \caption{Runtime of naive solution and partitioning strategies.}
@@ -217,7 +258,7 @@ all other measuring metrics. The X axis describes the amount of objects being
 processed. The Y axis describes how much time was spent in milliseconds
 executing the particular step in the program.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.5\textwidth]{even-average.png}
     \caption{Average runtime of spatial partitioning strategies with evenly
@@ -230,7 +271,7 @@ Figure \ref{fig:uneven-average} presents the average runtime for the program
 using the different strategies with an uneven object distribution. This includes
 all other measuring metrics. As the object count increases the spatial hashing
 trends towards a $O(n^2)$ runtime complexity.
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.5\textwidth]{uneven-average.png}
     \caption{Average runtime of spatial partitioning strategies with unevenly
@@ -238,12 +279,26 @@ trends towards a $O(n^2)$ runtime complexity.
     \label{fig:uneven-average}
 \end{figure}
 
+\subsubsection{Analysis}
+
+With evenly distributed objects The three strategies perform very similarly,
+though, spatial hashing does start showing more of an exponential runtime as the
+object count increases. Could be due to the implementation of the spatial
+hashing. Since it is using a hash map as its underlying data structure two
+different cells could have the same index within the same hash map meaning
+collision checks are happening for objects which are not close to each other in
+space. This happens because there is a limited amount of buckets available to
+store objects inside. The result of this scarcity is two hashes wrapping to the
+same bucket index. As we can see in \ref{fig:uneven-average} this issue becomes
+more apparent as the objects are less spread out.
+
 \subsection{Insertion}
 
 \subsubsection{Evenly Distributed Objects}
 The runtime complexity of the insertion algorithms for evenly distributed
-objects is shown in figure \ref{fig:even-insert}.
-\begin{figure}[h]
+objects is shown in figure \ref{fig:even-insert}. The metric being times is the
+insertion of all objects.
+\begin{figure}[H]
     \centering
     \caption{Average insertion time per object with evenly distributed objects.}
     \includegraphics[width=0.5\textwidth]{even-insert.png}
@@ -252,8 +307,9 @@ objects is shown in figure \ref{fig:even-insert}.
 
 \subsubsection{Unevenly Distributed Objects}
 The runtime complexity of the insertion algorithms for evenly distributed
-objects is shown in figure \ref{fig:uneven-insert}.
-\begin{figure}[h]
+objects is shown in figure \ref{fig:uneven-insert}. The metric being times is
+the insertion of all objects.
+\begin{figure}[H]
     \centering
     \caption{Average insertion time per object with unevenly distributed
     objects.}
@@ -261,13 +317,50 @@ objects is shown in figure \ref{fig:uneven-insert}.
     \label{fig:uneven-insert}
 \end{figure}
 
+\subsubsection{Analysis}
+There's virtually no difference in performance between the even and uneven
+insertion times. This is because the codepath taken for each insertion is the
+same, save for a different hash and bucket index. Because there is only a fixed
+amount of boxes able to be stored in each grid cell in both grid types the
+insertion time is run in $O(1)$, constant time. The case isn't the same for the
+quadtree since its a recursive algorithm. Each node has four sub-nodes which get
+traversed each insertion leading to a $O(\log_4 n)$ runtime since each step in
+the algorithm eliminates three of the sub-nodes. Once the correct node has been
+found the insertion time is a constant $O(1)$ since it uses the same technique
+as the other two.
+
+\subsection{Querying}
+
+\subsubsection{Evenly Distributed Objects}
+Figure \ref{fig:even-query} represents the average time taken to query the space
+per object with an even distribution.
+\begin{figure}[H]
+    \centering
+    \caption{Average query time per object with evenly distributed objects.}
+    \includegraphics[width=0.5\textwidth]{even-query.png}
+    \label{fig:even-query}
+\end{figure}
+
+\subsubsection{Unevenly Distributed Objects}
+Figure \ref{fig:uneven-query} represents the average time taken to query the space
+per object with an uneven distribution.
+\begin{figure}[H]
+    \centering
+    \caption{Average query time per object with unevenly distributed objects.}
+    \includegraphics[width=0.5\textwidth]{uneven-query.png}
+    \label{fig:uneven-query}
+\end{figure}
+
+\subsubsection{Analysis}
+
+
 \subsection{Collision}
 
 \subsubsection{Evenly Distributed Objects}
 Figure \ref{fig:even-collision} shows the total time spent checking for
 colliding objects per iteration with an even distribution. This time also
 includes the time taken for querying.
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     \caption{Average collision time for all objects with evenly distributed
     objects.}
@@ -279,7 +372,7 @@ includes the time taken for querying.
 Figure \ref{fig:uneven-collision} shows the total time spent checking for
 colliding objects per iteration with an uneven distribution. This time also
 includes the time taken for querying.
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     \caption{Average collision time for all objects with unevenly distributed
     objects.}
@@ -287,26 +380,9 @@ includes the time taken for querying.
     \label{fig:uneven-collision}
 \end{figure}
 
-\subsection{Querying}
+\section{Discussion}
 
-\subsubsection{Evenly Distributed Objects}
-Figure \ref{fig:even-query} represents the average time taken to query the space
-per object with an even distribution.
-\begin{figure}[h]
-    \centering
-    \caption{Average query time per object with evenly distributed objects.}
-    \includegraphics[width=0.5\textwidth]{even-query.png}
-    \label{fig:even-query}
-\end{figure}
-
-\subsubsection{Unevenly Distributed Objects}
-Figure \ref{fig:uneven-query} represents the average time taken to query the space
-per object with an uneven distribution.
-\begin{figure}[h]
-    \centering
-    \caption{Average query time per object with unevenly distributed objects.}
-    \includegraphics[width=0.5\textwidth]{uneven-query.png}
-    \label{fig:uneven-query}
-\end{figure}
+\section{Sources}
+Nystrom, Robert (2011) \textit{Game Programming Patterns}
 
 \end{document}
