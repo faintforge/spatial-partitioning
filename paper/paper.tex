@@ -19,7 +19,7 @@
     \centering
     \vspace*{1cm}
 
-    {\Huge \textbf{Comparison of Spatial Partitioning Strategies}}\\[1.5cm]
+    {\Huge \textbf{Spatial Partitioning Strategies}}\\[1.5cm]
 
     {\large Linus Kåreblom}\\[1cm]
 
@@ -44,9 +44,8 @@
     The aim is to evaluate the use cases for the different strategies.
     Each strategy was implemented to fit the same interface to make it as fair
     of a comparison as possible.
-    The results show how spatial hashing out performs every other method when
-    the objects are distributed evenly while quadtrees excel with uneven object
-    distribution.
+    The results show how quadtrees out performs every other method when
+    the objects are evenly and uneven distributed as the number of objects grow.
 \end{abstract}
 
 \newpage
@@ -176,6 +175,14 @@ taking place inside the structure meaning two cells could have the same bucket
 index which means queries for the one of the cells returns the objects in the
 other as well.
 
+\subsection{Vector}
+A vector refers to a dynamic array, not the mathematical concept of a vector.
+To allocate an array on the stack you need to know the size of it at compile
+time which means vectors have to live on the heap. The vector works by having a
+capacity which slowly fills up. Once it is full it resizes. This operation can
+be quite expensive since it needs to request new memory from the operating
+system and move all existing items into the new memory region.
+
 \section{Material and Method}
 
 \subsection{Linux}
@@ -230,7 +237,7 @@ data structure. Collision testing: total time spent checking objects against
 each other, which includes querying. Querying: average time spent retrieving
 objects from the data structure. Clearing: how long it takes to reset the data
 structure making it ready for rebuilding. Each metric was measured with a range
-of object count, labeled as 'box count' in the graphs, from ten to 2500 with an
+of object count, labeled as 'objects' in the graphs, from ten to 2500 with an
 increase of ten objects between each measurement. At each stage was run 32 times
 and the results were averaged to give smoother graphs. Two benchmarks was run,
 one with an even distribution of objects and one with an uneven distribution.
@@ -321,7 +328,7 @@ the insertion of all objects.
 There's virtually no difference in performance between the even and uneven
 insertion times. This is because the codepath taken for each insertion is the
 same, save for a different hash and bucket index. Because there is only a fixed
-amount of boxes able to be stored in each grid cell in both grid types the
+amount of objects able to be stored in each grid cell in both grid types the
 insertion time is run in $O(1)$, constant time. The case isn't the same for the
 quadtree since its a recursive algorithm. Each node has four sub-nodes which get
 traversed each insertion leading to a $O(\log_4 n)$ runtime since each step in
@@ -352,7 +359,21 @@ per object with an uneven distribution.
 \end{figure}
 
 \subsubsection{Analysis}
+In both cases the quadtree query has almost exactly the same time with the same
+$O(\log_4 n)$ runtime complexity. The other two, however, differ quite a bit
+time wise. This discrepancy is due to the use of vectors. Since a vector is used
+to return the overlapping objects the act of building this vector becomes more
+expensive as the amount of objects increases. Since there are more objects near
+each other in the unevenly distributed objects case there will naturally be more
+objects added to the vector. Quadtrees do not suffer from the same weakness
+since it has a limit on the amount of objects stored in each leaf meaning all
+queries has an upper limit to the number of objects, eliminating the need for
+vector resizing.
 
+The reason for the jaggedness in the graphs is because the execution time is so
+low the benchmark picks up on other things like the OS scheduler and other
+application doing work in the background taking away resources from the
+program.
 
 \subsection{Collision}
 
@@ -380,9 +401,18 @@ includes the time taken for querying.
     \label{fig:uneven-collision}
 \end{figure}
 
+\subsection{Analysis}
+Just like with querying the same thing happens with collisions. Because there
+are more objects close together there's a higher number of collision checks
+taking place. Since the quadtree limit the amount of objects in a cell the
+runtime doesn't change much between the two cases.
+
 \section{Discussion}
 
+
 \section{Sources}
-Nystrom, Robert (2011) \textit{Game Programming Patterns}
+Nystom, Robert (2014) \textit{Game Programming Patterns}, genever benning
+
+Nystom, Robert (2021) \textit{Crafting Interpreters}, genever benning
 
 \end{document}
