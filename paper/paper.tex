@@ -6,6 +6,7 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{svg}
 \usepackage{float}
+\usepackage{hyperref}
 
 \renewcommand{\baselinestretch}{1.15}
 \setlength{\parindent}{0pt}
@@ -15,6 +16,7 @@
 
 \begin{document}
 
+\pagenumbering{alph}
 \begin{titlepage}
     \centering
     \vspace*{1cm}
@@ -33,19 +35,19 @@
     \vspace{1cm}
     {\today}
 \end{titlepage}
+\pagenumbering{arabic}
 
 \begin{abstract}
     Spatial partitioning is a widely used optimization strategy to efficiently
     optimize objects in space. It can be found in many applications, from
-    simulating galaxies to video games.
-    Checking collision between objects is an expensive operation that quickly
-    becomes a bottleneck as the number of objects grow.
-    This paper compares three different strategies, alongside a naive solution.
-    The aim is to evaluate the use cases for the different strategies.
-    Each strategy was implemented to fit the same interface to make it as fair
-    of a comparison as possible.
-    The results show how quadtrees out performs every other method when
-    the objects are evenly and uneven distributed as the number of objects grow.
+    simulating galaxies to video games. Checking collision between objects is an
+    expensive operation that quickly becomes a bottleneck as the number of
+    objects grow. This paper compares three different strategies, alongside a
+    naive solution. The aim is to evaluate the use cases for the different
+    strategies. Each strategy was implemented to fit the same interface to make
+    it as fair of a comparison as possible. The results show how quadtrees out
+    performs every other method when the objects are evenly and uneven
+    distributed as the number of objects grow.
 \end{abstract}
 
 \newpage
@@ -75,18 +77,18 @@ research I found out about the three strategies I am comparing in this paper. I
 am doing this paper within the programming course.
 
 \section{Purpose \& Scope}
+\label{sec:purpose-and-scope}
 The purpose of this paper is to find the most optimal strategy for dividing up
 space to improve the speed of spatial querying of nearby objects.
 
 This study focuses mainly on CPU performance and runtime in exchange for less
 memory efficient implementation. Therefore time based evaluations of insertion,
-query time, clearing time and general collision testing time will be performed.
+query time and general collision testing time will be performed.
 
 The strategies are going to be evaluated on time based metrics - insertion,
-query, clearing and time spend doing collision testing. These evaluations are
-going to take place with two different distribution strategies of the objects
-though the same seed will be used for all tests so the pseudo-random numbers
-stay the same.
+query and time spend doing collision testing. These evaluations are going to
+take place with two different distribution strategies of the objects though the
+same seed will be used for all tests so the pseudo-random numbers stay the same.
 
 These strategies could be extended into the third dimension but this study
 focuses solely focused on two dimensional space.
@@ -408,11 +410,75 @@ taking place. Since the quadtree limit the amount of objects in a cell the
 runtime doesn't change much between the two cases.
 
 \section{Discussion}
+The design choices for this project was entirely focused on CPU performance
+leaving memory as an afterthought. This was done in order to mimic a modern game
+running on consumer hardware where memory is often an abundant resource.
+Everything inside the spatial partitioning strategies were allocated when the
+structure was initialized so no heap allocations were being issued in the middle
+of a hot loop. There are, however, two notable exception to this philosophy.
+When running queries I used vectors, which have to allocate memory on the heap,
+when doing queries. Looking back, there could be more efficient ways to handle
+this. Instead of having the query function handle the memory management, let the
+called handle that complexity. Have the caller allocate an array with sufficient
+enough size and pass that as a parameter for the function to modify. Though this
+would work it's not really a good solution, in my subjective opinion. Because
+there is guarantee of how many objects could be returned. The better solution
+would be to use a bump, arena or block allocator to further speed up this
+operation instead of using the general purpose malloc and free pattern provided
+by the C standard library. The other notable exception is the benchmarking tool
+I made for this. It uses a hash map to store how many times a function was run,
+the total time it ran and the average runtime per call. Because of my underlying
+implementation of the hash map it will require memory allocation when enough
+entries has been added. Not only that, but it was a nested structure which
+created a new hash map for each benchmark scope.
 
+The benchmarks are a thing I would have done differently if I would be redoing
+this project. There are a few decisions that I can't justify now. One of these
+weird choices is how I chose to benchmark insertions. Instead of running the
+benchmark for each object inserted I measured to total time taken to insert all
+objects. This doesn't sound weird until you look at how the rest of the
+benchmarks are measured. The queries are measured once per object instead of
+encapsulating all objects in a single benchmark. The insert metric is the only
+one which differs in this regard. It would be an easy fix code wise, but having
+to rewrite the paper based off of a new metric would be too much work to justify
+the change.
+
+I found that although quadtrees outperform all the other strategies in this
+particular program, it may not be the most suitable for all programs. Both grids
+and quadtrees limit you to a fixed known world size which could be a problem for
+larger games or simulations. If the quadtree is covering a massive region of the
+world then that would introduce significant overhead because there would have to
+be a lot of subdivisions happening. Chunking could fix this issue though there
+are other strategies more suitable for this. The spatial hashing grid solves
+this issue at the cost of performance. Grids come with the same world size
+restriction that the quadtree does but has the benefit of being extremely
+trivial to implement. At with almost all questions the answer to 'In what use
+case are the different algorithms most useful?' the answer is: it depends. For
+static objects which cover a known area, the quadtree is by far the most useful.
+For dynamic objects which move a lot the spatial hashing grid is more suitable.
+And lastly, the simple grid is really handy when you quickly want to increase
+the speed of a system without having to spend a lot of time writing the
+optimization strategy, which works really well for applications with a smaller
+amount of objects. A combination of multiple strategies could be used to gain
+the benefit of them, like utilizing the quadtree for static terrain while having
+all dynamic objects be stored in a spatial hashing gird.
+
+Then at what point is it worth implementing a more advanced data structure? Well
+that also depends heavily on your particular use case. If the problem only
+involves checking a handful of objects then the naive solution works just fine.
+As seen in \ref{fig:naive} the naive solution is rarely viable as the object
+count grows. The only real way to know when it is worth to implement a new
+optimization strategy is to measure your current solution and make a decision
+based off of that.
 
 \section{Sources}
 Nystom, Robert (2014) \textit{Game Programming Patterns}, genever benning
 
 Nystom, Robert (2021) \textit{Crafting Interpreters}, genever benning
+
+\section{Appendix}
+The source code written to get these metrics, alongside the python scripts used
+to generate the graphs, can be found at
+\url{https://github.com/faintforge/spatial-partitioning}.
 
 \end{document}
