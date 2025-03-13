@@ -6,7 +6,12 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{svg}
 \usepackage{float}
-\usepackage{hyperref}
+\usepackage{appendix}
+\usepackage[hidelinks]{hyperref}
+
+\hypersetup{
+    colorlinks=false,
+}
 
 \renewcommand{\baselinestretch}{1.15}
 \setlength{\parindent}{0pt}
@@ -40,7 +45,7 @@
 \begin{abstract}
     Spatial partitioning is a widely used optimization strategy to efficiently
     optimize objects in space. It can be found in many applications, from
-    simulating galaxies to video games. Checking collision between objects is an
+    simulating galaxies to video games. Checking collisions between objects is an
     expensive operation that quickly becomes a bottleneck as the number of
     objects grow. This paper compares three different strategies, alongside a
     naive solution. The aim is to evaluate the use cases for the different
@@ -71,27 +76,26 @@ avoid checking two objects on the opposite side of the world. This drastically
 decreases the number of collision checks performed each frame.
 
 As a consequence of this constraint I had to find a way to optimize this phase.
-That is what sent me down the rabbit hole of spatial partitioning as an
-optimization to do query objects close to each other in space. During my
-research I found out about the three strategies I am comparing in this paper. I
-am doing this paper within the programming course.
+That is what sent me down the rabbit hole of spatial partitioning strategies.
+During my research I discovered the three strategies I am comparing in this
+paper written under the subject of programming.
 
 \section{Purpose \& Scope}
-\label{sec:purpose-and-scope}
 The purpose of this paper is to find the most optimal strategy for dividing up
 space to improve the speed of spatial querying of nearby objects.
 
-This study focuses mainly on CPU performance and runtime in exchange for less
-memory efficient implementation. Therefore time based evaluations of insertion,
-query time and general collision testing time will be performed.
+This study focuses mainly on CPU performance and runtime at the cost of higher
+memory usage. Therefore time based evaluations of insertion, query time and
+general collision testing time will be performed.
 
 The strategies are going to be evaluated on time based metrics - insertion,
-query and time spend doing collision testing. These evaluations are going to
-take place with two different distribution strategies of the objects though the
-same seed will be used for all tests so the pseudo-random numbers stay the same.
+query and time spent on collision testing. Two object distributions are going
+to be evaluated. A pseudo-random number generator will be used but given the
+same seed of 1234 so all the pseudo-random numbers stay the same during every
+measurement.
 
 These strategies could be extended into the third dimension but this study
-focuses solely focused on two dimensional space.
+focuses solely on two dimensional space.
 
 The questions I'm going to answer are:
 \begin{itemize}
@@ -101,21 +105,22 @@ The questions I'm going to answer are:
 
 \section{Theory}
 \subsection{Spatial Partitioning}
-Spatial partitioning is an optimization technique used to make programs run
-faster. It is often found within physics applications. The theory behind this
-technique is to reduce the number of times one object is checked against
-another. Suppose we have one hundred objects in our world. The naive way to
-check each one of these against the others results in a ten thousand checks.
-Since checks are expensive to make, we want to perform as few of them as
-possible.
+Spatial partitioning is an optimization technique used to make spatial queries
+run faster. It is often found within physics applications. The theory behind
+this technique is to reduce the number of object pairs being checked against
+one another. Suppose we have one hundred objects in our world. The naive way to
+make sure non of them are colliding is to check every object against every other
+object in the world. This results in ten thousand collision checks. Since checks
+are expensive, we want to perform as few of them as possible.
 
 \subsection{Quadtree}
-A quadtree is a recursive data structure, meaning it contains pointers to each
-objects of the same type as itself. It is in the family of tree data structures.
-The data structure is comprised of nodes. Each node has four pointers to other
-nodes, could also be referred to as branches or leaves. This strategy works by
-inserting points into a leaf until the leaf reaches its capacity, then it splits
-into four equally large sub leaves. This subdivision pattern is shown in figure
+A quadtree is a recursive data structure, meaning it contains one or more
+pointers, or references, to an object of the same type as one of its members. It
+is in the family of tree data structures. The data structure is comprised of
+nodes. Each node has four pointers to other nodes, which could also be referred
+to as branches or leaves. This strategy works by inserting points into a leaf
+until the leaf reaches max capacity, then it splits into four equally large sub
+leaves. This subdivision pattern is shown in figure
 \ref{fig:quadtree}.
 
 \begin{figure}[ht]
@@ -125,15 +130,14 @@ into four equally large sub leaves. This subdivision pattern is shown in figure
 \end{figure}
 
 \subsection{The Stack and Heap}
-A program uses two different types of memory, the stack and the heap. When the
-program starts a fixed amount of bytes are allocated for the program to use,
-this is what is called the stack. When the program creates a variable it is
-allocated on the stack, which is done by incrementing the stack pointer by the
-size of the variable data type. Since a stack allocation is only a single
-instruction it is incredibly fast. The heap is much larger than the stack but
-slower because you have to request space within it from the operating system.
-Allocating is considered to be a slow operation since there is a lot of overhead
-introduced.
+A program uses two different types of memory, the stack and the heap. When a
+program starts a fixed amount of bytes are allocated for it to use, this is what
+is called the stack. When the program creates a variable it is allocated on the
+stack, which is done by incrementing the stack pointer by the size of the
+variable data type. Since a stack allocation is only a single instruction it is
+incredibly fast. The heap is much larger than the stack but slower because you
+have to request space within it from the operating system. Allocating is
+considered to be a slow operation since there is a lot of overhead introduced.
 
 \subsection{Big O notation}
 Big O notation is a notation system to describe the time complexity of an
@@ -148,34 +152,35 @@ due to the constant being smaller than its $O(n)$ equivalent.
 
 \subsection{Static Grid}
 The static grid is built using a simple array. Indexing into the array is an
-$O(1)$ operation. The caveat with this approach is you are forced to know how
+$O(1)$ operation. The caveat with this approach is you are forced to specify how
 big the area you want the to partition to be before compiling the program. Both
 insertion and querying only requires a simple index into the grid array which
 makes this approach super fast.
 
 \subsection{Hash Map}
-A hash map is a data structure which key value pairs allowing for aliasing of
-values. For example, a hash map using strings as keys and integers as values
-could map the key "life" to the value 42, meaning a query into the hash map for
-"life" would return 42. The way this works is by using a cryptographic hashing
-function to generate a unique hash for the object. This hash is a simple number
-which is usually very large. To make the hash useful you run modulo on it to
-make sure it's between zero and the number of buckets inside the hash map. The
-same method is used for retrieval, first running the key through the same
-hashing function, then wrapping it using modulo and returning what lies in the
-bucket. The only caveat with this is there could be collisions within the hash
-map. Two hashes could wrap into the same index. There are a multitude of ways to
-handle collisions like open addressing and separate chaining.
+A hash map is a data structure which stores key-value pairs allowing for
+aliasing of values. For example, a hash map using strings as keys and integers
+as values could map the key "life" to the value 42, meaning a query into the
+hash map for "life" would return 42. The way this works is by using a
+cryptographic hashing function to generate a unique hash for the object. This
+hash is a simple number which is usually very large. To make the hash useful you
+run modulo on it to make sure it's between zero and the number of buckets inside
+the hash map. The same method is used for retrieval, first running the key
+through the same hashing function, then wrapping it using modulo and returning
+what lies in the bucket. The only caveat with this is there could be collisions
+within the hash map. Two hashes could wrap into the same index. There are a
+multitude of ways to handle collisions like open addressing and separate
+chaining.
 
 \subsection{Spatial Hashing Grid}
 The spatial hashing grid is built using the same technique as a hash map. The
 method I used to write my spatial hashing grid was to allocate an arbitrarily
 sized array. When inserting into the structure I first hash the coordinate of
 the object, then run a modulo operation on it giving me a number within the
-array bounds, and then it is inserted into the cell. No collision resolution is
+array bounds, then insert it into the cell. No collision resolution is
 taking place inside the structure meaning two cells could have the same bucket
-index which means queries for the one of the cells returns the objects in the
-other as well.
+index which means queries for one of the cells returns the objects in the other
+as well.
 
 \subsection{Vector}
 A vector refers to a dynamic array, not the mathematical concept of a vector.
@@ -208,27 +213,35 @@ can be read from the browser.
 \subsection{CMake}
 CMake is a buildsystem, used to generate generate the final executable from the
 source code. It aids in compiling and linking the program making cross
-compilation and dependency management trivial.
+compilation and dependency management trivial. Since this is a simple project I
+could have used a simple Makefile or even a shell script file but I opted for
+CMake since it's industry standard. This, ultimately, had no effect on the
+programs performance.
 
 \subsection{C}
 C was the program of choice for this project due to its low level control.
 Since memory is managed manually in C I could be sure the results would not be
-skewed by a garbage collector running in the middle of a benchmark.
+skewed by a garbage collector running in the middle of a benchmark. Its impact
+is minimal and its fast build times allowed for quickly iterating during
+development.
 
 \subsection{SDL2}
 SDL2 - Simple DirectMedia Layer - is a cross-platform library supplying an easy
 API to create a window and render to it. This was crucial when developing since
 visualizing the data structures made it easier to spot errors than simply
 looking at the code. It also gives a nice visual representation of the program.
+I used SDL2 instead of other similar libraries, such as Raylib, because I'm
+familiar with it. Since the program is dealing with problems concerning two
+dimensional space I found it easier to debug visually which is why SDL2 is a
+dependency. This doesn't affect the results since it was only used during the
+debugging phase of development.
 
 \subsection{Python}
-Python is an interpreted programming language which was used for making a script
-to generate graphs. All the graphs used in this paper was generated from data
+Python is an interpreted programming language which was used in a script to
+generate graphs. All the graphs used in this paper was generated from data
 collected from a C program, which dumped said data into a JSON file, which was
 then read by a Python script using the matplotlib library to generate nice
 looking graphs.
-
-\newpage
 
 \section{Results \& Analysis}
 This section presents the results and offers an analysis of the benchmarking
@@ -239,8 +252,8 @@ data structure. Collision testing: total time spent checking objects against
 each other, which includes querying. Querying: average time spent retrieving
 objects from the data structure. Clearing: how long it takes to reset the data
 structure making it ready for rebuilding. Each metric was measured with a range
-of object count, labeled as 'objects' in the graphs, from ten to 2500 with an
-increase of ten objects between each measurement. At each stage was run 32 times
+of object counts, labeled as 'objects' in the graphs, from 10 to 2500 with
+increments of 10 objects between each measurement. At each stage was run 32 times
 and the results were averaged to give smoother graphs. Two benchmarks was run,
 one with an even distribution of objects and one with an uneven distribution.
 
@@ -410,6 +423,8 @@ taking place. Since the quadtree limit the amount of objects in a cell the
 runtime doesn't change much between the two cases.
 
 \section{Discussion}
+
+\subsection{Design Choices}
 The design choices for this project was entirely focused on CPU performance
 leaving memory as an afterthought. This was done in order to mimic a modern game
 running on consumer hardware where memory is often an abundant resource.
@@ -421,17 +436,35 @@ when doing queries. Looking back, there could be more efficient ways to handle
 this. Instead of having the query function handle the memory management, let the
 called handle that complexity. Have the caller allocate an array with sufficient
 enough size and pass that as a parameter for the function to modify. Though this
-would work it's not really a good solution, in my subjective opinion. Because
+would work it's not really a good solution, in my subjective opinion, because
 there is guarantee of how many objects could be returned. The better solution
 would be to use a bump, arena or block allocator to further speed up this
 operation instead of using the general purpose malloc and free pattern provided
 by the C standard library. The other notable exception is the benchmarking tool
-I made for this. It uses a hash map to store how many times a function was run,
-the total time it ran and the average runtime per call. Because of my underlying
-implementation of the hash map it will require memory allocation when enough
-entries has been added. Not only that, but it was a nested structure which
-created a new hash map for each benchmark scope.
+I developed for this. It uses a hash map to store how many times a function was
+run, the total time it ran and the average runtime per call. Because of my
+underlying implementation of the hash map it will require memory allocation when
+enough entries have been added. Not only that, but it was a nested structure
+which created a new hash map for each benchmark scope.
 
+\subsubsection{Spatial Hashing Grid}
+No collision resolution was implemented for the spatial hashing grid because
+there were very few collisions happening during testing so I didn't pay it much
+mind. I thought the collision handling code would be more expensive than the
+actual performance penalty from not handling the collisions. This was a naive
+way of thinking. I should have implemented and measured instead of making such
+bold assumptions.
+
+\subsection{Compilation}
+One thing I noticed after having generated all the graphs was that the program
+was compiled in debug mode, meaning no compiler optimizations were enabled. If I
+had changed the 'CMAKE\_BUILD\_TYPE' variable in my CMake build script from
+'Debug' to 'Release' the results could be different due to the compiler doing
+clever optimizations to speed up certain things. This could have lead to one
+strategy out performing another. At the time of discovering this, it was too
+late to explore this possibility further.
+
+\subsection{Benchmarking}
 The benchmarks are a thing I would have done differently if I would be redoing
 this project. There are a few decisions that I can't justify now. One of these
 weird choices is how I chose to benchmark insertions. Instead of running the
@@ -443,6 +476,7 @@ one which differs in this regard. It would be an easy fix code wise, but having
 to rewrite the paper based off of a new metric would be too much work to justify
 the change.
 
+\subsection{Pitfalls of Certain Strategies}
 I found that although quadtrees outperform all the other strategies in this
 particular program, it may not be the most suitable for all programs. Both grids
 and quadtrees limit you to a fixed known world size which could be a problem for
@@ -450,18 +484,20 @@ larger games or simulations. If the quadtree is covering a massive region of the
 world then that would introduce significant overhead because there would have to
 be a lot of subdivisions happening. Chunking could fix this issue though there
 are other strategies more suitable for this. The spatial hashing grid solves
-this issue at the cost of performance. Grids come with the same world size
-restriction that the quadtree does but has the benefit of being extremely
-trivial to implement. At with almost all questions the answer to 'In what use
-case are the different algorithms most useful?' the answer is: it depends. For
-static objects which cover a known area, the quadtree is by far the most useful.
-For dynamic objects which move a lot the spatial hashing grid is more suitable.
-And lastly, the simple grid is really handy when you quickly want to increase
-the speed of a system without having to spend a lot of time writing the
-optimization strategy, which works really well for applications with a smaller
-amount of objects. A combination of multiple strategies could be used to gain
-the benefit of them, like utilizing the quadtree for static terrain while having
-all dynamic objects be stored in a spatial hashing gird.
+this issue at the cost of performance. Grids come with the same world size restriction that the quadtree does but has
+the benefit of being extremely trivial to implement.
+
+\subsection{Use Cases}
+As with almost all questions the answer to 'In what use case are the different
+algorithms most useful?' the answer is: it depends. For static objects which
+cover a known area, the quadtree is by far the most useful. For dynamic objects
+which move a lot the spatial hashing grid is more suitable. And lastly, the
+simple grid is really handy when you quickly want to increase the speed of a
+system without having to spend a lot of time writing the optimization strategy,
+which works really well for applications with a smaller amount of objects. A
+combination of multiple strategies could be used to gain the benefit of them,
+like utilizing the quadtree for static terrain while having all dynamic objects
+be stored in a spatial hashing gird.
 
 Then at what point is it worth implementing a more advanced data structure? Well
 that also depends heavily on your particular use case. If the problem only
@@ -476,9 +512,22 @@ Nystom, Robert (2014) \textit{Game Programming Patterns}, genever benning
 
 Nystom, Robert (2021) \textit{Crafting Interpreters}, genever benning
 
-\section{Appendix}
-The source code written to get these metrics, alongside the python scripts used
-to generate the graphs, can be found at
-\url{https://github.com/faintforge/spatial-partitioning}.
+Stack Overflow (2012). What integer hash function are good that accepts an
+integer hash key? Retrieved 2024-12-23, from
+\url{https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key}
+
+\appendix
+
+\section{Source Code}
+The source code is shipped in a tarball with GZip compression name
+'source.tar.gz'. Once unpacked all source code needed to compile and run it is
+provided. If the SDL2 library isn't installed on the system then the code will
+not compile.
+
+To run the python script to generate the graphs python3 needs to be installed
+alongside the matplotlib library.
+
+A copy of the source code along side some other files can be found on the web
+at \url{https://github.com/faintforge/spatial-partitioning}.
 
 \end{document}
